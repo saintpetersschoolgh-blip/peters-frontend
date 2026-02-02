@@ -141,13 +141,11 @@ export default function DashboardLayout({
 
       <main
         className="flex-1 flex flex-col min-w-0 transition-all duration-300"
-        style={{ marginLeft: `${effectiveWidth}px`, width: `calc(100% - ${effectiveWidth}px)`, marginRight: 0, paddingLeft: 0, paddingRight: 0 }}
+        style={{ marginLeft: `${effectiveWidth}px`, width: `calc(100% - ${effectiveWidth}px)` }}
       >
         <Header onMenuToggle={() => setIsSidebarOpen(true)} />
-        <div className="flex-1 relative overflow-x-hidden" style={{ margin: 0, padding: 0 }}>
-          <div className="w-full h-full" style={{ margin: 0, padding: '0 12px', marginLeft: 0, marginRight: 0 }}>
-            {children}
-          </div>
+        <div className="flex-1 relative overflow-x-hidden" style={{ padding: '0 12px' }}>
+          {children}
         </div>
 
         <footer className="mt-auto py-6 text-center text-slate-400 text-xs font-medium border-t border-slate-200 bg-white">

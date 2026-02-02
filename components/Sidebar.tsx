@@ -95,6 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     'headmaster-reports': pathname.startsWith('/reports') || pathname.startsWith('/academic/results'),
     'headmaster-finance': pathname.startsWith('/finance'),
     'headmaster-communication': pathname.startsWith('/notifications'),
+    'headmaster-settings': pathname.startsWith('/settings'),
       'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
       // Admin menus
       'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
@@ -105,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       'admin-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/admin/users/head-masters') || pathname.startsWith('/attendance/teachers'),
       'admin-reports': pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
       'admin-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
-      'admin-settings': pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      'admin-settings': pathname.startsWith('/settings') || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
     // Teacher menus
     teacher: pathname.startsWith('/teacher') || pathname.startsWith('/teachers'),
     'teacher-overview': pathname === '/teacher' || pathname.startsWith('/teacher/overview'),
@@ -144,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       'admin-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/admin/users/head-masters') || pathname.startsWith('/attendance/teachers'),
       'admin-reports': pathname.startsWith('/reports') || pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
       'admin-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
-      'admin-settings': pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      'admin-settings': pathname.startsWith('/settings') || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
       // Teacher menus
       teacher: pathname.startsWith('/teacher') || pathname.startsWith('/teachers'),
       'teacher-overview': pathname === '/teacher' || pathname.startsWith('/teacher/overview'),
@@ -389,6 +390,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
+      label: 'Settings',
+      icon: ICONS.Settings,
+      key: 'headmaster-settings',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/settings', label: 'Email & SMS Settings', icon: ICONS.Settings },
+      ],
+    },
+    {
       label: 'Approvals & Reviews',
       icon: ICONS.Check,
       key: 'headmaster-approvals',
@@ -598,6 +608,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       key: 'admin-settings',
       roles: [UserRole.ADMIN],
       submenu: [
+        { path: '/settings', label: 'Email & SMS Settings', icon: ICONS.Settings },
         { path: '/admin/permissions', label: 'Roles & Permissions', icon: ICONS.Settings },
       ],
     },
@@ -713,7 +724,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ],
       'admin-approvals': ['/head-master/approvals/exam-results', '/head-master/approvals/syllabus-submissions', '/teachers/syllabus'],
       'admin-setups': ['/admin/setups/academic-year', '/admin/setups/terms', '/classrooms', '/subjects', '/admin/setups/periods', '/admin/setups/grade-levels'],
-      'admin-settings': ['/admin/permissions'],
+      'admin-settings': ['/settings', '/admin/permissions'],
     };
     return map;
   }, []);

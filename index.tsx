@@ -180,7 +180,12 @@ const AppRouter = () => {
     if (!user) return false;
 
     // Shared pages (all authenticated users)
-    if (path === '/' || path === '/account' || path === '/settings') return true;
+    if (path === '/' || path === '/account') return true;
+    
+    // Settings - only Admin and Headmaster
+    if (path === '/settings') {
+      return user.role === UserRole.ADMIN || user.role === UserRole.HEAD_MASTER;
+    }
 
     // Notifications - allow parents to send messages
     if (path === '/notifications/send') {
