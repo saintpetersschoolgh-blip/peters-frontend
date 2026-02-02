@@ -6,6 +6,9 @@ import RootLayout from './app/layout';
 import DashboardLayout from './components/DashboardLayout';
 import HomePage from './app/page';
 import AdminDashboardPage from './app/admin/dashboard/page';
+import HeadMasterDashboardPage from './app/head-master/page';
+import HeadMasterExamApprovalsPage from './app/head-master/approvals/exam-results/page';
+import HeadMasterSyllabusApprovalsPage from './app/head-master/approvals/syllabus-submissions/page';
 import TeacherDashboardPage from './app/teacher/dashboard/page';
 import StudentDashboardPage from './app/student/dashboard/page';
 import ParentDashboardPage from './app/parent/dashboard/page';
@@ -17,6 +20,9 @@ import ClassroomsManagementPage from './app/classrooms/page';
 import SubjectsManagementPage from './app/subjects/page';
 import StudentAttendancePage from './app/attendance/students/page';
 import TeacherAttendancePage from './app/attendance/teachers/page';
+import StudentProfilePage from './app/students/profile/page';
+import StudentAttendanceViewPage from './app/students/attendance/page';
+import FeesPage from './app/students/fees/page';
 import ExamsManagementPage from './app/academic/exams/page';
 import ExamResultsPage from './app/academic/results/page';
 import FeeStructurePage from './app/finance/fees/page';
@@ -45,6 +51,8 @@ import SyllabusProgressPage from './app/teachers/syllabus/progress/page';
 import SubmitSyllabusPage from './app/teachers/syllabus/submit/page';
 import SubmissionStatusPage from './app/teachers/syllabus/status/page';
 import CreateSubjectSyllabusPage from './app/teachers/syllabus/create/page';
+import TeacherTimetablePage from './app/teachers/timetable/page';
+import PermissionsPage from './app/admin/permissions/page';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
@@ -139,6 +147,19 @@ const AppRouter = () => {
     // Shared pages (all authenticated users)
     if (path === '/' || path === '/account' || path === '/settings') return true;
 
+    // Notifications - allow parents to send messages
+    if (path === '/notifications/send') {
+      return (
+        user.role === UserRole.ADMIN ||
+        user.role === UserRole.HEAD_MASTER ||
+        user.role === UserRole.TEACHER ||
+        user.role === UserRole.PARENT
+      );
+    }
+    if (path.startsWith('/notifications')) {
+      return user.role === UserRole.ADMIN || user.role === UserRole.HEAD_MASTER;
+    }
+
     // Admin + Head-master area
     if (
       path === '/admin' ||
@@ -148,7 +169,6 @@ const AppRouter = () => {
       path === '/subjects' ||
       path === '/attendance/teachers' ||
       path.startsWith('/finance') ||
-      path.startsWith('/notifications') ||
       path === '/students'
     ) {
       return user.role === UserRole.ADMIN || user.role === UserRole.HEAD_MASTER;
@@ -163,12 +183,24 @@ const AppRouter = () => {
       );
     }
 
-    // Head-master route
-    if (path === '/head-master' || path.startsWith('/head-master/')) {
+    // Head-master route (but allow admin to access approvals)
+    if (path === '/head-master') {
+      return user.role === UserRole.HEAD_MASTER;
+    }
+    if (path.startsWith('/head-master/approvals/')) {
+      return user.role === UserRole.HEAD_MASTER || user.role === UserRole.ADMIN;
+    }
+    if (path.startsWith('/head-master/')) {
       return user.role === UserRole.HEAD_MASTER;
     }
 
-    // Teacher area
+    // Teacher area (but allow headmasters and admins to access timetable and syllabus)
+    if (path === '/teachers/timetable') {
+      return user.role === UserRole.TEACHER || user.role === UserRole.HEAD_MASTER || user.role === UserRole.ADMIN;
+    }
+    if (path === '/teachers/syllabus' || path.startsWith('/teachers/syllabus/')) {
+      return user.role === UserRole.TEACHER || user.role === UserRole.HEAD_MASTER || user.role === UserRole.ADMIN;
+    }
     if (path === '/teacher' || path.startsWith('/teacher') || path.startsWith('/teachers/')) {
       return user.role === UserRole.TEACHER;
     }
@@ -280,7 +312,23 @@ const AppRouter = () => {
   if (pathname === '/head-master') {
     return (
       <DashboardLayout>
-        <AdminDashboardPage />
+        <HeadMasterDashboardPage />
+      </DashboardLayout>
+    );
+  }
+
+  if (pathname === '/head-master/approvals/exam-results') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><HeadMasterExamApprovalsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  if (pathname === '/head-master/approvals/syllabus-submissions') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><HeadMasterSyllabusApprovalsPage /></ErrorBoundary>
       </DashboardLayout>
     );
   }
@@ -339,6 +387,14 @@ const AppRouter = () => {
     return (
       <DashboardLayout>
         <ErrorBoundary><SubmissionStatusPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  if (pathname === '/teachers/timetable') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherTimetablePage /></ErrorBoundary>
       </DashboardLayout>
     );
   }
@@ -440,6 +496,37 @@ const AppRouter = () => {
       <DashboardLayout>
         <ErrorBoundary>
           <TeacherAttendancePage />
+        </ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Student Pages (shared with parents)
+  if (pathname === '/students/profile') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary>
+          <StudentProfilePage />
+        </ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  if (pathname === '/students/attendance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary>
+          <StudentAttendanceViewPage />
+        </ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  if (pathname === '/students/fees') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary>
+          <FeesPage />
         </ErrorBoundary>
       </DashboardLayout>
     );
@@ -559,6 +646,15 @@ const AppRouter = () => {
     return (
       <DashboardLayout>
         <ErrorBoundary><PeriodsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Admin Permissions Page
+  if (pathname === '/admin/permissions') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><PermissionsPage /></ErrorBoundary>
       </DashboardLayout>
     );
   }

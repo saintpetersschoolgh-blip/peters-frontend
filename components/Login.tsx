@@ -96,7 +96,6 @@ export default function Login() {
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-blue-500 transition-colors"
               autoComplete="username"
               required
-              disabled={isSubmitting}
             />
             <p className="text-xs text-gray-500">
               Role is inferred from the username (admin / head-master / teacher / student / parent).
@@ -113,7 +112,6 @@ export default function Login() {
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-blue-500 transition-colors"
               autoComplete="current-password"
               required
-              disabled={isSubmitting}
             />
           </div>
 
@@ -124,7 +122,6 @@ export default function Login() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                disabled={isSubmitting}
               />
               Remember me
             </label>

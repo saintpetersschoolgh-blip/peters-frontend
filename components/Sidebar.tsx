@@ -22,15 +22,90 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const [headMasterAccess, setHeadMasterAccess] = useState<{ enabled: boolean; allowed: string[] } | null>(null);
+  const [teacherAccess, setTeacherAccess] = useState<{ enabled: boolean; allowed: string[] } | null>(null);
+  const [parentAccess, setParentAccess] = useState<{ enabled: boolean; allowed: string[] } | null>(null);
+  const [accessKey, setAccessKey] = useState(0); // Force re-render key
+
+  useEffect(() => {
+    if (!user) {
+      setHeadMasterAccess(null);
+      setTeacherAccess(null);
+      setParentAccess(null);
+      return;
+    }
+
+    const loadAccess = () => {
+      try {
+        const raw = localStorage.getItem('sidebarPermissionsConfig');
+        const map = raw ? (JSON.parse(raw) as Record<string, Record<string, { enabled: boolean; allowed: string[] }>>) : {};
+        const key = user.email || user.username || '';
+        
+        if (user.role === UserRole.HEAD_MASTER) {
+          const config = map.headmaster?.[key] || null;
+          setHeadMasterAccess(config);
+        } else if (user.role === UserRole.TEACHER) {
+          const config = map.teacher?.[key] || null;
+          setTeacherAccess(config);
+        } else if (user.role === UserRole.PARENT) {
+          const config = map.parent?.[key] || null;
+          setParentAccess(config);
+        }
+        
+        setAccessKey(prev => prev + 1); // Force re-render
+      } catch {
+        setHeadMasterAccess(null);
+        setTeacherAccess(null);
+        setParentAccess(null);
+      }
+    };
+
+    loadAccess();
+    
+    // Listen for storage events (cross-tab)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'sidebarPermissionsConfig') loadAccess();
+    };
+    
+    // Listen for custom events (same-tab)
+    const onCustom = () => loadAccess();
+    
+    // Poll for changes (fallback)
+    const pollInterval = setInterval(loadAccess, 500);
+    
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('sidebar-permissions-updated', onCustom as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('sidebar-permissions-updated', onCustom as EventListener);
+      clearInterval(pollInterval);
+    };
+  }, [user]);
 
   // State for expanded submenus (supports nested expansion)
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-    'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
-    'admin-academic': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/academic'),
-    'admin-attendance': pathname.startsWith('/attendance'),
-    'admin-finance': pathname.startsWith('/finance'),
-    'admin-communication': pathname.startsWith('/notifications'),
-    'admin-setups': pathname.startsWith('/admin/setups'),
+    // Headmaster menus
+    'headmaster-students': pathname === '/students' || pathname.startsWith('/attendance/students'),
+    'headmaster-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/attendance/teachers'),
+    'headmaster-academics': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/teachers/syllabus') || pathname.startsWith('/teachers/timetable'),
+    'headmaster-exams': pathname.startsWith('/academic/exams') || pathname.startsWith('/academic/results'),
+    'headmaster-reports': pathname.startsWith('/academic/results'),
+    'headmaster-finance': pathname.startsWith('/finance'),
+    'headmaster-communication': pathname.startsWith('/notifications'),
+    'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
+    'headmaster-settings': pathname === '/users' || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      // Admin menus
+      'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
+      'admin-academic': pathname.startsWith('/academic'),
+      'admin-attendance': pathname.startsWith('/attendance'),
+      'admin-finance': pathname.startsWith('/finance'),
+      'admin-communication': pathname.startsWith('/notifications'),
+      'admin-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/admin/users/head-masters') || pathname.startsWith('/attendance/teachers'),
+      'admin-reports': pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
+      'admin-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
+      'admin-settings': pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+    // Teacher menus
     teacher: pathname.startsWith('/teacher') || pathname.startsWith('/teachers'),
     'teacher-overview': pathname === '/teacher' || pathname.startsWith('/teacher/overview'),
     'teacher-classes': pathname.startsWith('/teacher/classes'),
@@ -50,12 +125,27 @@ const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     setExpandedMenus(prev => ({
       ...prev,
+      // Headmaster menus
+      'headmaster-students': pathname === '/students' || pathname.startsWith('/attendance/students'),
+      'headmaster-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/attendance/teachers'),
+      'headmaster-academics': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/teachers/timetable'),
+      'headmaster-exams': pathname.startsWith('/academic/exams') || pathname.startsWith('/academic/results'),
+      'headmaster-reports': pathname.startsWith('/academic/results'),
+      'headmaster-finance': pathname.startsWith('/finance'),
+      'headmaster-communication': pathname.startsWith('/notifications'),
+      'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
+      'headmaster-settings': pathname === '/users' || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      // Admin menus
       'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
-      'admin-academic': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/academic'),
+      'admin-academic': pathname.startsWith('/academic'),
       'admin-attendance': pathname.startsWith('/attendance'),
       'admin-finance': pathname.startsWith('/finance'),
       'admin-communication': pathname.startsWith('/notifications'),
-      'admin-setups': pathname.startsWith('/admin/setups'),
+      'admin-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/admin/users/head-masters') || pathname.startsWith('/attendance/teachers'),
+      'admin-reports': pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
+      'admin-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
+      'admin-settings': pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      // Teacher menus
       teacher: pathname.startsWith('/teacher') || pathname.startsWith('/teachers'),
       'teacher-overview': pathname === '/teacher' || pathname.startsWith('/teacher/overview'),
       'teacher-classes': pathname.startsWith('/teacher/classes'),
@@ -132,6 +222,99 @@ const Sidebar: React.FC<SidebarProps> = ({
       icon: ICONS.Dashboard,
       roles: [UserRole.PARENT],
     },
+    // Headmaster Navigation - Reorganized
+    {
+      label: 'Students',
+      icon: ICONS.Students,
+      key: 'headmaster-students',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/students', label: 'All Students', icon: ICONS.Students },
+        { path: '/attendance/students', label: 'Student Attendance', icon: ICONS.UserCheck },
+      ],
+    },
+    {
+      label: 'Staff',
+      icon: ICONS.Teachers,
+      key: 'headmaster-staff',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/admin/users/teachers', label: 'Teaching Staff', icon: ICONS.Teachers },
+        { path: '/attendance/teachers', label: 'Staff Attendance', icon: ICONS.UserCheck },
+      ],
+    },
+    {
+      label: 'Academics',
+      icon: ICONS.BookOpen,
+      key: 'headmaster-academics',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/classrooms', label: 'Classes & Arms', icon: ICONS.LayoutGrid },
+        { path: '/subjects', label: 'Subjects', icon: ICONS.BookOpen },
+        { path: '/teachers/timetable', label: 'Timetable', icon: ICONS.Calendar },
+      ],
+    },
+    {
+      label: 'Exams & Results',
+      icon: ICONS.Trophy,
+      key: 'headmaster-exams',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/academic/exams', label: 'Exams Management', icon: ICONS.Book },
+        { path: '/academic/results', label: 'Results Review & Approval', icon: ICONS.Trophy },
+      ],
+    },
+    {
+      label: 'Reports & Analytics',
+      icon: ICONS.BarChart,
+      key: 'headmaster-reports',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/academic/results', label: 'Performance Analytics', icon: ICONS.BarChart },
+      ],
+    },
+    {
+      label: 'Finance',
+      icon: ICONS.CreditCard,
+      key: 'headmaster-finance',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/finance/fees', label: 'Fees Structure', icon: ICONS.CreditCard },
+        { path: '/finance/payments', label: 'Fee Collection Summary', icon: ICONS.CreditCard },
+      ],
+    },
+    {
+      label: 'Communication',
+      icon: ICONS.Bell,
+      key: 'headmaster-communication',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/notifications/send', label: 'Announcements & Notices', icon: ICONS.Bell },
+        { path: '/notifications/flagged', label: 'Flagged Items', icon: ICONS.AlertTriangle },
+      ],
+    },
+    {
+      label: 'Approvals & Reviews',
+      icon: ICONS.Check,
+      key: 'headmaster-approvals',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/head-master/approvals/exam-results', label: 'Result Approval', icon: ICONS.Check },
+        { path: '/head-master/approvals/syllabus-submissions', label: 'Syllabus Submissions', icon: ICONS.Book },
+      ],
+    },
+    {
+      label: 'Settings & Administration',
+      icon: ICONS.Settings,
+      key: 'headmaster-settings',
+      roles: [UserRole.HEAD_MASTER],
+      submenu: [
+        { path: '/users', label: 'User Management', icon: ICONS.User },
+        { path: '/admin/permissions', label: 'Roles & Permissions', icon: ICONS.Settings },
+        { path: '/admin/setups/academic-year', label: 'Academic Year / Term Setup', icon: ICONS.Calendar },
+      ],
+    },
+    // Admin Navigation (keep existing structure)
     {
       label: 'User Management',
       icon: ICONS.Users,
@@ -151,8 +334,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       key: 'admin-academic',
       roles: [UserRole.ADMIN],
       submenu: [
-        { path: '/classrooms', label: 'Classrooms', icon: ICONS.LayoutGrid },
-        { path: '/subjects', label: 'Subjects', icon: ICONS.BookOpen },
         { path: '/academic/exams', label: 'Exams', icon: ICONS.Book },
         { path: '/academic/results', label: 'Exam Results', icon: ICONS.Trophy },
       ],
@@ -188,6 +369,39 @@ const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
+      label: 'Staff',
+      icon: ICONS.Teachers,
+      key: 'admin-staff',
+      roles: [UserRole.ADMIN],
+      submenu: [
+        { path: '/admin/users/teachers', label: 'Teaching Staff', icon: ICONS.Teachers },
+        { path: '/admin/users/head-masters', label: 'Head Master Management', icon: ICONS.Award },
+        { path: '/attendance/teachers', label: 'Staff Attendance', icon: ICONS.UserCheck },
+      ],
+    },
+    {
+      label: 'Reports & Analytics',
+      icon: ICONS.BarChart,
+      key: 'admin-reports',
+      roles: [UserRole.ADMIN],
+      submenu: [
+        { path: '/academic/results', label: 'Performance Analytics', icon: ICONS.BarChart },
+        { path: '/attendance/students', label: 'Attendance Reports', icon: ICONS.UserCheck },
+        { path: '/attendance/teachers', label: 'Teacher Performance', icon: ICONS.Teachers },
+      ],
+    },
+    {
+      label: 'Approvals & Reviews',
+      icon: ICONS.Check,
+      key: 'admin-approvals',
+      roles: [UserRole.ADMIN],
+      submenu: [
+        { path: '/head-master/approvals/exam-results', label: 'Result Approval', icon: ICONS.Check },
+        { path: '/head-master/approvals/syllabus-submissions', label: 'Syllabus Submissions', icon: ICONS.Book },
+        { path: '/teachers/syllabus', label: 'Syllabus View', icon: ICONS.BookOpen },
+      ],
+    },
+    {
       label: 'Setups',
       icon: ICONS.Settings,
       key: 'admin-setups',
@@ -195,10 +409,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       submenu: [
         { path: '/admin/setups/academic-year', label: 'Academic Year', icon: ICONS.Calendar },
         { path: '/admin/setups/terms', label: 'Term', icon: ICONS.Calendar },
-        { path: '/admin/setups/classrooms', label: 'ClassRoom', icon: ICONS.LayoutGrid },
-        { path: '/admin/setups/subjects', label: 'Subject', icon: ICONS.BookOpen },
+        { path: '/classrooms', label: 'ClassRoom', icon: ICONS.LayoutGrid },
+        { path: '/subjects', label: 'Subject', icon: ICONS.BookOpen },
         { path: '/admin/setups/periods', label: 'Period', icon: ICONS.Clock },
         { path: '/admin/setups/grade-levels', label: 'Grade Level', icon: ICONS.Cap },
+      ],
+    },
+    {
+      label: 'Settings & Administration',
+      icon: ICONS.Settings,
+      key: 'admin-settings',
+      roles: [UserRole.ADMIN],
+      submenu: [
+        { path: '/admin/permissions', label: 'Roles & Permissions', icon: ICONS.Settings },
       ],
     },
     { path: '/teacher/assessments/exam-results', label: 'Exams Result', icon: ICONS.Trophy, roles: [UserRole.TEACHER] },
@@ -223,11 +446,121 @@ const Sidebar: React.FC<SidebarProps> = ({
     { path: '/notifications/send', label: 'Messages', icon: ICONS.Bell, roles: [UserRole.PARENT] },
   ];
 
-  const canSeeItem = (item: any): boolean => {
+  // Parent-child mapping for headmaster and admin menus
+  const parentChildMap = React.useMemo(() => {
+    const map: Record<string, string[]> = {
+      // Headmaster menus
+      'headmaster-students': ['/students', '/attendance/students'],
+      'headmaster-staff': ['/admin/users/teachers', '/attendance/teachers'],
+      'headmaster-academics': ['/classrooms', '/subjects', '/teachers/timetable'],
+      'headmaster-exams': ['/academic/exams', '/academic/results'],
+      'headmaster-reports': ['/academic/results'],
+      'headmaster-finance': ['/finance/fees', '/finance/payments'],
+      'headmaster-communication': ['/notifications/send', '/notifications/flagged'],
+      'headmaster-approvals': ['/head-master/approvals/exam-results', '/head-master/approvals/syllabus-submissions'],
+      'headmaster-settings': ['/users', '/admin/permissions', '/admin/setups/academic-year'],
+      // Admin menus
+      'admin-users': ['/users', '/students', '/admin/users/teachers', '/admin/users/head-masters', '/admin/users/parents'],
+      'admin-academic': ['/academic/exams', '/academic/results'],
+      'admin-attendance': ['/attendance/students', '/attendance/teachers'],
+      'admin-finance': ['/finance/fees', '/finance/payments'],
+      'admin-communication': ['/notifications/send', '/notifications/flagged'],
+      'admin-staff': ['/admin/users/teachers', '/admin/users/head-masters', '/attendance/teachers'],
+      'admin-reports': ['/academic/results', '/attendance/students', '/attendance/teachers'],
+      'admin-approvals': ['/head-master/approvals/exam-results', '/head-master/approvals/syllabus-submissions', '/teachers/syllabus'],
+      'admin-setups': ['/admin/setups/academic-year', '/admin/setups/terms', '/classrooms', '/subjects', '/admin/setups/periods', '/admin/setups/grade-levels'],
+      'admin-settings': ['/admin/permissions'],
+    };
+    return map;
+  }, []);
+
+  const canSeeItem = React.useCallback((item: any): boolean => {
     if (!isAuthenticated || !user) return false;
     if (!item.roles) return true;
-    return item.roles.includes(user.role);
-  };
+    if (!item.roles.includes(user.role)) return false;
+    
+    // Check permissions based on role
+    if (user.role === UserRole.HEAD_MASTER) {
+      if (!headMasterAccess || !headMasterAccess.enabled) return true;
+      const allowed = new Set(headMasterAccess.allowed || []);
+      if (item.key && parentChildMap[item.key]) {
+        const children = parentChildMap[item.key];
+        return children.some(childPath => allowed.has(childPath));
+      }
+      if (item.path) return allowed.has(item.path);
+      if (item.submenu) {
+        return item.submenu.some((sub: any) => sub.path && allowed.has(sub.path));
+      }
+      return true;
+    } else if (user.role === UserRole.TEACHER) {
+      if (!teacherAccess || !teacherAccess.enabled) return true;
+      const allowed = new Set(teacherAccess.allowed || []);
+      if (item.path) return allowed.has(item.path);
+      if (item.submenu) {
+        return item.submenu.some((sub: any) => sub.path && allowed.has(sub.path));
+      }
+      return true;
+    } else if (user.role === UserRole.PARENT) {
+      if (!parentAccess || !parentAccess.enabled) return true;
+      const allowed = new Set(parentAccess.allowed || []);
+      if (item.path) return allowed.has(item.path);
+      if (item.submenu) {
+        return item.submenu.some((sub: any) => sub.path && allowed.has(sub.path));
+      }
+      return true;
+    }
+    
+    return true;
+  }, [isAuthenticated, user, headMasterAccess, teacherAccess, parentAccess, parentChildMap]);
+
+  const visibleItems = React.useMemo(() => {
+    const base = navigationItems.filter(canSeeItem);
+    if (!user) return base;
+    
+    // Filter items based on role-specific permissions
+    if (user.role === UserRole.HEAD_MASTER) {
+      if (!headMasterAccess || !headMasterAccess.enabled) return base;
+      const allowed = new Set(headMasterAccess.allowed || []);
+      return base
+        .map((item: any) => {
+          if (item.submenu) {
+            const filteredSubmenu = item.submenu.filter((sub: any) => sub.path && allowed.has(sub.path));
+            return filteredSubmenu.length > 0 ? { ...item, submenu: filteredSubmenu } : null;
+          }
+          if (item.path) return allowed.has(item.path) ? item : null;
+          return item;
+        })
+        .filter(Boolean);
+    } else if (user.role === UserRole.TEACHER) {
+      if (!teacherAccess || !teacherAccess.enabled) return base;
+      const allowed = new Set(teacherAccess.allowed || []);
+      return base
+        .map((item: any) => {
+          if (item.submenu) {
+            const filteredSubmenu = item.submenu.filter((sub: any) => sub.path && allowed.has(sub.path));
+            return filteredSubmenu.length > 0 ? { ...item, submenu: filteredSubmenu } : null;
+          }
+          if (item.path) return allowed.has(item.path) ? item : null;
+          return item;
+        })
+        .filter(Boolean);
+    } else if (user.role === UserRole.PARENT) {
+      if (!parentAccess || !parentAccess.enabled) return base;
+      const allowed = new Set(parentAccess.allowed || []);
+      return base
+        .map((item: any) => {
+          if (item.submenu) {
+            const filteredSubmenu = item.submenu.filter((sub: any) => sub.path && allowed.has(sub.path));
+            return filteredSubmenu.length > 0 ? { ...item, submenu: filteredSubmenu } : null;
+          }
+          if (item.path) return allowed.has(item.path) ? item : null;
+          return item;
+        })
+        .filter(Boolean);
+    }
+    
+    return base;
+  }, [navigationItems, user, headMasterAccess, teacherAccess, parentAccess, canSeeItem, parentChildMap, accessKey]);
 
   const isActivePath = (path?: string): boolean => {
     if (!path) return false;
@@ -300,13 +633,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && <span className="animate-in fade-in slide-in-from-left-2 duration-300">St. Peter's International</span>}
           </Link>
           <button onClick={onClose} className="lg:hidden p-2 text-slate-300 hover:bg-white/10 rounded-lg transition-colors" aria-label="Close Sidebar">
-            {ICONS.Close}
+            {ICONS.Close()}
           </button>
         </div>
 
         {/* Navigation Content */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin pb-4 overflow-x-hidden">
-          {navigationItems.filter(canSeeItem).map((item, index) => {
+          {visibleItems.map((item, index) => {
             if (item.path) {
               // Single navigation item
               return (
@@ -319,7 +652,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     <span className={`transition-colors ${isCollapsed ? 'scale-110' : ''}`}>
-                      {item.icon}
+                      {item.icon?.()}
                     </span>
                     {!isCollapsed && <span>{item.label}</span>}
                   </div>
@@ -343,7 +676,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onClick={onClose}
                     >
                       <span className={`transition-colors ${isCollapsed ? 'scale-110' : ''}`}>
-                        {item.icon}
+                        {item.icon?.()}
                       </span>
                       {!isCollapsed && <span>{item.label}</span>}
                     </Link>
@@ -354,8 +687,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                         aria-label={`Toggle ${item.label}`}
                         type="button"
                       >
-                        <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                          {ICONS.ChevronDown}
+                        <span className="transition-all duration-200">
+                          {isExpanded ? ICONS.ChevronDown() : ICONS.ChevronRight()}
                         </span>
                       </button>
                     )}
@@ -376,7 +709,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                               onClick={onClose}
                             >
                               <span className={`transition-colors ${active ? 'text-slate-900' : 'text-slate-400'}`}>
-                                {subItem.icon}
+                                {subItem.icon?.()}
                               </span>
                               <span>{subItem.label}</span>
                             </Link>
@@ -396,12 +729,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-2.5">
                                   <span className={`transition-colors ${hasActiveSubSubItem ? 'text-slate-900' : 'text-slate-400'}`}>
-                                    {subItem.icon}
+                                    {subItem.icon?.()}
                                   </span>
                                   <span>{subItem.label}</span>
                                 </div>
                                 <span className={`transition-transform duration-200 text-xs ${isSubExpanded ? 'rotate-90' : ''}`}>
-                                  {ICONS.ChevronRight}
+                                  {ICONS.ChevronRight()}
                                 </span>
                               </div>
                             </button>
@@ -420,7 +753,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     onClick={onClose}
                                   >
                                     <span className={`transition-colors ${active ? 'text-slate-900' : 'text-slate-400'}`}>
-                                      {subSubItem.icon}
+                                      {subSubItem.icon?.()}
                                     </span>
                                     <span>{subSubItem.label}</span>
                                   </Link>
@@ -450,7 +783,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'} px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors text-sm`}
                 title="Logout"
               >
-                {ICONS.Logout}
+                {ICONS.Logout()}
                 {!isCollapsed && <span className="text-xs font-medium">Logout</span>}
               </button>
             </div>

@@ -1,11 +1,13 @@
 /* eslint-disable react/no-unescaped-entities */
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { ICONS } from '../../constants';
 import { TeacherStudentsOverviewPage } from './students/TeacherStudentsOverviewPage';
 import { TeacherStudentProfilePage } from './students/TeacherStudentProfilePage';
 import { TeacherStudentPerformancePage } from './students/TeacherStudentPerformancePage';
+import { Exam, ExamResult, Student } from '../../types';
 
 type Option = { value: string; label: string };
 type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select';
@@ -194,6 +196,380 @@ function Modal({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const IMPORTED_RESULTS_KEY = 'importedExamResults';
+
+function TeacherExamResultsPage() {
+  const mockStudents: Student[] = [
+    {
+      id: 's001',
+      admissionNumber: 'STU001',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@school.com',
+      classroomId: 'c001',
+      isActive: true,
+      enrolledAt: '2024-01-01',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      gender: 'MALE',
+      dateOfBirth: '2008-05-15',
+      phoneNumber: '+1234567890',
+      address: '123 Main St',
+      emergencyContact: 'Parent Contact',
+    },
+    {
+      id: 's002',
+      admissionNumber: 'STU002',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      email: 'jane.smith@school.com',
+      classroomId: 'c001',
+      isActive: true,
+      enrolledAt: '2024-01-01',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      gender: 'FEMALE',
+      dateOfBirth: '2008-08-20',
+      phoneNumber: '+1234567891',
+      address: '456 Oak St',
+      emergencyContact: 'Parent Contact',
+    },
+  ];
+
+  const mockExams: Exam[] = [
+    {
+      id: 'e001',
+      title: 'Mathematics Mid-Term Exam',
+      subjectId: 's001',
+      classroomId: 'c001',
+      term: 'Term 1',
+      date: '2024-02-15',
+      startTime: '09:00',
+      duration: 120,
+      totalScore: 100,
+      venue: 'Room 101',
+      status: 'GRADED' as any,
+      createdById: 'u001',
+      isActive: true,
+      createdAt: '2024-01-15T00:00:00Z',
+    },
+  ];
+
+  function loadImportedResults() {
+    try {
+      const raw = localStorage.getItem(IMPORTED_RESULTS_KEY);
+      return raw ? (JSON.parse(raw) as ExamResult[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function persistImportedResults(items: ExamResult[]) {
+    try {
+      localStorage.setItem(IMPORTED_RESULTS_KEY, JSON.stringify(items));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  const [students] = useState<Student[]>(mockStudents);
+  const [exams] = useState<Exam[]>(mockExams);
+  const [results, setResults] = useState<ExamResult[]>(() => loadImportedResults());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedExam, setSelectedExam] = useState<string>(mockExams[0]?.id || '');
+  const [importError, setImportError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const filteredResults = results.filter(result => {
+    const matchesSearch = `${result.student?.firstName} ${result.student?.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         result.student?.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         result.exam?.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesExam = selectedExam === 'ALL' || result.examId === selectedExam;
+    return matchesSearch && matchesExam;
+  });
+
+  const calculateGrade = (score: number, totalScore: number): string => {
+    const percentage = totalScore > 0 ? Math.round((score / totalScore) * 100) : 0;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 30) return 'D';
+    return 'F';
+  };
+
+  const handleImportClick = () => {
+    setImportError(null);
+    if (!selectedExam || selectedExam === 'ALL') {
+      setImportError('Select an exam before importing results.');
+      return;
+    }
+    importInputRef.current?.click();
+  };
+
+  const handleImportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = reader.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, string | number>>(worksheet, { defval: '' });
+
+        if (!rows.length) {
+          setImportError('The import file is empty.');
+          return;
+        }
+
+        const selectedExamObj = exams.find(e => e.id === selectedExam);
+        if (!selectedExamObj) {
+          setImportError('Selected exam not found.');
+          return;
+        }
+
+        const newResults: ExamResult[] = [];
+        const errors: string[] = [];
+
+        rows.forEach((row, index) => {
+          const admissionNumber = String(row.admissionNumber || row.AdmissionNumber || row.admission || '').trim();
+          const studentId = String(row.studentId || row.StudentId || row.studentID || '').trim();
+          const scoreRaw = row.score ?? row.Score ?? '';
+          const remarks = String(row.remarks || row.Remarks || '').trim();
+
+          const student =
+            (studentId && students.find(s => s.id === studentId)) ||
+            (admissionNumber && students.find(s => s.admissionNumber === admissionNumber));
+
+          const score = Number(scoreRaw);
+
+          if (!student) {
+            errors.push(`Row ${index + 2}: student not found.`);
+            return;
+          }
+          if (Number.isNaN(score)) {
+            errors.push(`Row ${index + 2}: invalid score.`);
+            return;
+          }
+
+          const grade =
+            String(row.grade || row.Grade || '').trim() ||
+            calculateGrade(score, selectedExamObj.totalScore);
+
+          newResults.push({
+            id: `import_${selectedExam}_${student.id}_${Date.now()}_${index}`,
+            examId: selectedExam,
+            exam: selectedExamObj,
+            studentId: student.id,
+            student,
+            score,
+            grade,
+            remarks,
+            enteredById: 'teacher',
+            isPublished: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        });
+
+        if (errors.length) {
+          setImportError(errors.slice(0, 3).join(' '));
+          return;
+        }
+
+        setResults(prev => {
+          const filtered = prev.filter(r => r.examId !== selectedExam);
+          const next = [...filtered, ...newResults];
+          persistImportedResults(next);
+          return next;
+        });
+      } catch (err) {
+        setImportError('Failed to import file. Please verify the format.');
+      } finally {
+        if (importInputRef.current) importInputRef.current.value = '';
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Failed to read the file.');
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleDownloadTemplate = (format: 'xlsx' | 'csv') => {
+    const templateRows = [
+      {
+        admissionNumber: 'STU001',
+        studentId: '',
+        score: 85,
+        grade: '',
+        remarks: 'Excellent performance',
+        examId: selectedExam || '',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ResultsTemplate');
+
+    if (format === 'csv') {
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'exam_results_template.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    XLSX.writeFile(workbook, 'exam_results_template.xlsx');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Exam Results</h1>
+          <p className="text-gray-600 mt-1">Import results for headmaster approval</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,.xlsx"
+            className="hidden"
+            onChange={handleImportChange}
+          />
+          <button
+            onClick={handleImportClick}
+            className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            {ICONS.Import}
+            Import Results
+          </button>
+          <button
+            onClick={() => handleDownloadTemplate('xlsx')}
+            className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            Download Template
+          </button>
+          <button
+            onClick={() => handleDownloadTemplate('csv')}
+            className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            Download CSV
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <input
+              type="text"
+              placeholder="Search by student name or admission number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Exam</label>
+            <select
+              value={selectedExam || 'ALL'}
+              onChange={(e) => setSelectedExam(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Exams</option>
+              {exams.map(exam => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="text-xs text-gray-500 flex items-end">
+            Import columns: admissionNumber or studentId, score, optional grade, remarks.
+          </div>
+        </div>
+        {importError && <div className="text-sm text-red-600">{importError}</div>}
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">
+            Imported Results ({filteredResults.length})
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Student
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exam
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Score
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Grade
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredResults.map(result => (
+                <tr key={result.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {result.student?.firstName} {result.student?.lastName}
+                    <div className="text-xs text-gray-500">{result.student?.admissionNumber}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {result.exam?.title}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {result.score}/{result.exam?.totalScore}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {result.grade}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        result.isPublished ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {result.isPublished ? 'Approved' : 'Pending approval'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredResults.length === 0 && (
+          <div className="text-center py-10 text-sm text-gray-500">
+            No imported results yet. Use the Import button to upload an Excel/CSV file.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -691,6 +1067,9 @@ function AdminStyleListPage({ def }: { def: PageDef }) {
   const [form, setForm] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isAssignmentSubmissions = storageKey === 'teacher:submissions';
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return items.filter((it) => JSON.stringify(it).toLowerCase().includes(search.toLowerCase()));
@@ -748,6 +1127,84 @@ function AdminStyleListPage({ def }: { def: PageDef }) {
 
   const remove = (id: string) => setItems(items.filter((it) => it.id !== id));
 
+  const handleDownloadTemplate = (format: 'xlsx' | 'csv') => {
+    const templateRows = [
+      {
+        title: 'Assignment: Reading Comprehension',
+        description: 'Submitted: 30 • Pending: 3',
+        date: new Date().toISOString().split('T')[0],
+        student: 'John Doe (STU001)',
+        status: 'Submitted',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'AssignmentsTemplate');
+
+    if (format === 'csv') {
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'assignment_submissions_template.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    XLSX.writeFile(workbook, 'assignment_submissions_template.xlsx');
+  };
+
+  const handleImportClick = () => {
+    setImportError(null);
+    importInputRef.current?.click();
+  };
+
+  const handleImportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = reader.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, string | number>>(worksheet, { defval: '' });
+
+        if (!rows.length) {
+          setImportError('The import file is empty.');
+          return;
+        }
+
+        const imported = rows.map((row, index) => ({
+          id: `import_${Date.now()}_${index}`,
+          title: String(row.title || row.Title || row.assignment || row.Assignment || 'Imported Submission').trim(),
+          description: String(row.description || row.Description || row.notes || row.Notes || '').trim(),
+          date: String(row.date || row.Date || row.submittedDate || row.SubmittedDate || '').trim(),
+          student: String(row.student || row.Student || row.studentName || row.StudentName || '').trim(),
+          status: String(row.status || row.Status || 'Submitted').trim(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+
+        setItems(prev => [...imported, ...prev]);
+      } catch (err) {
+        setImportError('Failed to import file. Please verify the format.');
+      } finally {
+        if (importInputRef.current) importInputRef.current.value = '';
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Failed to read the file.');
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const columns =
     def.columns ||
     (def.fields && def.fields.length
@@ -764,15 +1221,41 @@ function AdminStyleListPage({ def }: { def: PageDef }) {
           <h1 className="text-3xl font-bold text-gray-900">{def.title}</h1>
           {def.description ? <p className="text-gray-600 mt-1">{def.description}</p> : null}
         </div>
-        {def.primaryActionLabel ? (
-          <button
-            onClick={openCreate}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            {ICONS.Add}
-            {def.primaryActionLabel}
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {isAssignmentSubmissions && (
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,.xlsx"
+                className="hidden"
+                onChange={handleImportChange}
+              />
+              <button
+                onClick={handleImportClick}
+                className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                {ICONS.Import}
+                Import
+              </button>
+              <button
+                onClick={() => handleDownloadTemplate('xlsx')}
+                className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Download Template
+              </button>
+            </>
+          )}
+          {def.primaryActionLabel ? (
+            <button
+              onClick={openCreate}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              {ICONS.Add}
+              {def.primaryActionLabel}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -792,6 +1275,12 @@ function AdminStyleListPage({ def }: { def: PageDef }) {
             </button>
           </div>
         </div>
+        {isAssignmentSubmissions && (
+          <div className="text-xs text-gray-500 mt-3">
+            Import columns: <span className="font-semibold">title</span>, <span className="font-semibold">description</span>, <span className="font-semibold">date</span>, <span className="font-semibold">student</span>, <span className="font-semibold">status</span>.
+          </div>
+        )}
+        {importError && <div className="text-sm text-red-600 mt-2">{importError}</div>}
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -1216,6 +1705,9 @@ export default function TeacherFeaturePage({ pathname }: { pathname: string }) {
   if (pathname.startsWith('/teacher/students/performance/')) {
     const id = pathname.replace('/teacher/students/performance/', '').trim();
     return <TeacherStudentPerformancePage studentId={id} />;
+  }
+  if (pathname.startsWith('/teacher/assessments/exam-results')) {
+    return <TeacherExamResultsPage />;
   }
 
   if (def.kind === 'list') return <AdminStyleListPage def={def} />;

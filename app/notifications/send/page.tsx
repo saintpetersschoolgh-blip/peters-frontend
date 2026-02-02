@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Notification, UserRole, Classroom, formatUserRole } from '../../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Notification, UserRole, Classroom, formatUserRole, Student, Teacher } from '../../../types';
 import { ICONS } from '../../../constants';
+import { useAuth } from '../../../lib/auth-context';
 
 interface NotificationFormData {
   title: string;
@@ -10,11 +11,18 @@ interface NotificationFormData {
   recipientType: Notification['recipientType'];
   recipientRoles: UserRole[];
   classroomIds: string[];
+  recipientTeacherId?: string; // For parent-to-teacher messages
 }
 
 export default function SendNotificationsPage() {
+  const { user } = useAuth();
+  const isParent = user?.role === UserRole.PARENT;
+  const canSend = user?.role === UserRole.ADMIN || user?.role === UserRole.HEAD_MASTER || user?.role === UserRole.TEACHER || user?.role === UserRole.PARENT;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [children, setChildren] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<Notification['type'] | 'ALL'>('ALL');
@@ -33,6 +41,7 @@ export default function SendNotificationsPage() {
     recipientType: 'ALL',
     recipientRoles: [],
     classroomIds: [],
+    recipientTeacherId: '',
   });
 
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NotificationFormData, string>>>({});
@@ -118,20 +127,129 @@ export default function SendNotificationsPage() {
       },
     ];
 
+    // Mock children and teachers for parents
+    const mockChildren: Student[] = isParent ? [
+      {
+        id: 'student001',
+        admissionNumber: 'STU001',
+        firstName: 'John',
+        lastName: 'Doe',
+        dateOfBirth: '2008-05-15',
+        gender: 'MALE',
+        address: '123 Main St',
+        phoneNumber: '+1234567890',
+        emergencyContact: '+1234567891',
+        parentId: 'parent001',
+        classroomId: 'c001',
+        classroom: mockClassrooms[0],
+        isActive: true,
+        enrolledAt: '2024-01-01',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    ] : [];
+
+    const mockTeachers: Teacher[] = [
+      {
+        id: 'teacher001',
+        staffNumber: 'T001',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
+        dateOfBirth: '1985-03-20',
+        gender: 'FEMALE',
+        phoneNumber: '+1234567892',
+        address: '456 Teacher St',
+        email: 'sarah.johnson@school.com',
+        qualifications: ['B.Ed Mathematics', 'M.Sc Education'],
+        subjects: [],
+        classrooms: [mockClassrooms[0]],
+        isActive: true,
+        joinedAt: '2020-01-01',
+        createdAt: '2020-01-01T00:00:00Z',
+        updatedAt: '2020-01-01T00:00:00Z',
+      },
+      {
+        id: 'teacher002',
+        staffNumber: 'T002',
+        firstName: 'Michael',
+        lastName: 'Brown',
+        dateOfBirth: '1988-07-15',
+        gender: 'MALE',
+        phoneNumber: '+1234567893',
+        address: '789 Teacher Ave',
+        email: 'michael.brown@school.com',
+        qualifications: ['B.Ed English', 'M.A Literature'],
+        subjects: [],
+        classrooms: [mockClassrooms[1]],
+        isActive: true,
+        joinedAt: '2019-01-01',
+        createdAt: '2019-01-01T00:00:00Z',
+        updatedAt: '2019-01-01T00:00:00Z',
+      },
+    ];
+
     // Simulate loading delay
     setTimeout(() => {
       setClassrooms(mockClassrooms);
       setNotifications(mockNotifications);
+      if (isParent) {
+        setChildren(mockChildren);
+        setSelectedChildId(mockChildren[0]?.id || '');
+        setTeachers(mockTeachers);
+      }
       setLoading(false);
     }, 500);
-  }, []);
+  }, [isParent]);
 
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'ALL' || notification.type === selectedType;
-    return matchesSearch && matchesType;
-  });
+  // Get class master for selected child
+  const selectedChild = useMemo(() => {
+    return children.find(c => c.id === selectedChildId);
+  }, [children, selectedChildId]);
+
+  const classMaster = useMemo(() => {
+    if (!selectedChild?.classroom?.classMasterId) return null;
+    return teachers.find(t => t.id === selectedChild.classroom?.classMasterId);
+  }, [selectedChild, teachers]);
+
+  const filteredNotifications = useMemo(() => {
+    let filtered = notifications;
+    
+    // For parents, filter to show only messages sent to them or their children's class
+    if (isParent) {
+      filtered = filtered.filter(notification => {
+        // Show messages sent to all users
+        if (notification.recipientType === 'ALL') return true;
+        
+        // Show messages sent to parents
+        if (notification.recipientType === 'ROLE' && notification.recipientRoles?.includes(UserRole.PARENT)) {
+          return true;
+        }
+        
+        // Show messages sent to the child's classroom
+        if (notification.recipientType === 'CLASS' && selectedChild?.classroomId) {
+          return notification.classroomIds?.includes(selectedChild.classroomId);
+        }
+        
+        // Show messages sent directly to the parent (if recipientIds includes parent ID)
+        if (notification.recipientType === 'INDIVIDUAL' && notification.recipientIds?.includes(user?.id || '')) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
+    
+    const matchesSearch = filtered.filter(n => 
+      n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      n.message.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const matchesType = matchesSearch.filter(n => 
+      selectedType === 'ALL' || n.type === selectedType
+    );
+    
+    return matchesType;
+  }, [notifications, isParent, selectedChild, user, searchTerm, selectedType]);
 
   // Form validation
   const validateForm = (): boolean => {
@@ -145,12 +263,19 @@ export default function SendNotificationsPage() {
       errors.message = 'Message is required';
     }
 
-    if (formData.recipientType === 'ROLE' && formData.recipientRoles.length === 0) {
-      errors.recipientRoles = 'At least one recipient role must be selected';
-    }
+    if (isParent) {
+      // For parents, require teacher selection
+      if (!formData.recipientTeacherId) {
+        errors.recipientTeacherId = 'Please select a teacher to send the message to';
+      }
+    } else {
+      if (formData.recipientType === 'ROLE' && formData.recipientRoles.length === 0) {
+        errors.recipientRoles = 'At least one recipient role must be selected';
+      }
 
-    if (formData.recipientType === 'CLASS' && formData.classroomIds.length === 0) {
-      errors.classroomIds = 'At least one classroom must be selected';
+      if (formData.recipientType === 'CLASS' && formData.classroomIds.length === 0) {
+        errors.classroomIds = 'At least one classroom must be selected';
+      }
     }
 
     setFormErrors(errors);
@@ -163,9 +288,10 @@ export default function SendNotificationsPage() {
       title: '',
       message: '',
       type: 'GENERAL',
-      recipientType: 'ALL',
+      recipientType: isParent ? 'INDIVIDUAL' : 'ALL',
       recipientRoles: [],
       classroomIds: [],
+      recipientTeacherId: isParent && classMaster ? classMaster.id : '',
     });
     setFormErrors({});
     setSelectedNotification(null);
@@ -226,10 +352,11 @@ export default function SendNotificationsPage() {
           title: formData.title,
           message: formData.message,
           type: formData.type,
-          recipientType: formData.recipientType,
-          recipientRoles: formData.recipientRoles.length > 0 ? formData.recipientRoles : undefined,
-          classroomIds: formData.classroomIds.length > 0 ? formData.classroomIds : undefined,
-          sentById: 'current-user', // Would be current user ID
+          recipientType: isParent ? 'INDIVIDUAL' : formData.recipientType,
+          recipientRoles: isParent ? undefined : (formData.recipientRoles.length > 0 ? formData.recipientRoles : undefined),
+          classroomIds: isParent ? undefined : (formData.classroomIds.length > 0 ? formData.classroomIds : undefined),
+          recipientIds: isParent && formData.recipientTeacherId ? [formData.recipientTeacherId] : undefined,
+          sentById: user?.id || 'current-user',
           isRead: false,
           createdAt: new Date().toISOString(),
         };
@@ -242,9 +369,10 @@ export default function SendNotificationsPage() {
         title: '',
         message: '',
         type: 'GENERAL',
-        recipientType: 'ALL',
+        recipientType: isParent ? 'INDIVIDUAL' : 'ALL',
         recipientRoles: [],
         classroomIds: [],
+        recipientTeacherId: isParent && classMaster ? classMaster.id : '',
       });
     } catch (error) {
       console.error('Error sending notification:', error);
@@ -308,6 +436,14 @@ export default function SendNotificationsPage() {
         }).filter(Boolean).join(', ');
         return classNames || 'Specific Classrooms';
       case 'INDIVIDUAL':
+        // For parent messages, show teacher name
+        if (notification.recipientIds && notification.recipientIds.length > 0) {
+          const teacherId = notification.recipientIds[0];
+          const teacher = teachers.find(t => t.id === teacherId);
+          if (teacher) {
+            return `${teacher.firstName} ${teacher.lastName}`;
+          }
+        }
         return 'Individual Recipients';
       default:
         return 'All Users';
@@ -351,17 +487,46 @@ export default function SendNotificationsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Send Notifications</h1>
-          <p className="text-gray-600 mt-1">Communicate with students, teachers, and parents</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isParent ? 'Messages' : 'Send Notifications'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {isParent ? 'View messages and communicate with teachers and school' : 'Communicate with students, teachers, and parents'}
+          </p>
         </div>
-        <button
-          onClick={handleComposeNotification}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          {ICONS.Add}
-          Compose Notification
-        </button>
+        {canSend && (
+          <button
+            onClick={handleComposeNotification}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            {ICONS.Add}
+            {isParent ? 'Send Message' : 'Compose Notification'}
+          </button>
+        )}
       </div>
+
+      {/* Child Selection for Parents */}
+      {isParent && children.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+          <select
+            value={selectedChildId}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.firstName} {child.lastName} - {child.admissionNumber} ({child.classroom?.name})
+              </option>
+            ))}
+          </select>
+          {classMaster && (
+            <p className="text-sm text-gray-600 mt-2">
+              Class Master: <span className="font-medium">{classMaster.firstName} {classMaster.lastName}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -443,20 +608,22 @@ export default function SendNotificationsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleEditNotification(notification)}
-                    className="text-blue-600 hover:text-blue-900 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteNotification(notification)}
-                    className="text-red-600 hover:text-red-900 text-sm font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
+                {canSend && (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleEditNotification(notification)}
+                      className="text-blue-600 hover:text-blue-900 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNotification(notification)}
+                      className="text-red-600 hover:text-red-900 text-sm font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -479,8 +646,12 @@ export default function SendNotificationsPage() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Compose Notification</h2>
-                <p className="text-sm text-gray-600 mt-1">Send a message to selected recipients</p>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {isParent ? 'Send Message' : 'Compose Notification'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {isParent ? 'Send a message to your child\'s teacher' : 'Send a message to selected recipients'}
+                </p>
               </div>
               <button
                 onClick={() => setShowComposeModal(false)}
@@ -493,6 +664,32 @@ export default function SendNotificationsPage() {
 
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4">
               <div className="space-y-4">
+                {/* Child Selection for Parents */}
+                {isParent && children.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Regarding Child <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedChildId}
+                      onChange={(e) => setSelectedChildId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      {children.map((child) => (
+                        <option key={child.id} value={child.id}>
+                          {child.firstName} {child.lastName} - {child.admissionNumber} ({child.classroom?.name})
+                        </option>
+                      ))}
+                    </select>
+                    {classMaster && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Class Master: <span className="font-medium">{classMaster.firstName} {classMaster.lastName}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Title <span className="text-red-500">*</span>
@@ -563,92 +760,133 @@ export default function SendNotificationsPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Recipients
-                  </label>
-                  <select
-                    value={formData.recipientType}
-                    onChange={(e) => {
-                      setFormData({ 
-                        ...formData, 
-                        recipientType: e.target.value as Notification['recipientType'],
-                        recipientRoles: [],
-                        classroomIds: []
-                      });
-                      setFormErrors({});
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-                    disabled={isSubmitting}
-                  >
-                    <option value="ALL">All Users</option>
-                    <option value="ROLE">Specific Roles</option>
-                    <option value="CLASS">Specific Classrooms</option>
-                    <option value="INDIVIDUAL">Individual Recipients</option>
-                  </select>
-
-                  {formData.recipientType === 'ROLE' && (
-                    <div className="space-y-2 p-4 bg-gray-50 rounded-md border border-gray-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Roles:</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.values(UserRole).map(role => (
-                          <label key={role} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
-                            <input
-                              type="checkbox"
-                              checked={formData.recipientRoles.includes(role)}
-                              onChange={(e) => handleRoleChange(role, e.target.checked)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              disabled={isSubmitting}
-                            />
-                            <span className="text-sm text-gray-700">{formatUserRole(role)}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {formErrors.recipientRoles && (
-                        <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
-                          {ICONS.Alert}
-                          {formErrors.recipientRoles}
-                        </p>
+                {isParent ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Send To <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.recipientTeacherId}
+                      onChange={(e) => {
+                        setFormData({ ...formData, recipientTeacherId: e.target.value });
+                        if (formErrors.recipientTeacherId) setFormErrors({ ...formErrors, recipientTeacherId: undefined });
+                      }}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        formErrors.recipientTeacherId ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      disabled={isSubmitting}
+                      required
+                    >
+                      <option value="">Select a teacher...</option>
+                      {classMaster && (
+                        <option value={classMaster.id}>
+                          {classMaster.firstName} {classMaster.lastName} (Class Master - {selectedChild?.classroom?.name})
+                        </option>
                       )}
-                    </div>
-                  )}
-
-                  {formData.recipientType === 'CLASS' && (
-                    <div className="space-y-2 p-4 bg-gray-50 rounded-md border border-gray-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Classrooms:</label>
-                      <div className="max-h-48 overflow-y-auto space-y-2">
-                        {classrooms.map(classroom => (
-                          <label key={classroom.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
-                            <input
-                              type="checkbox"
-                              checked={formData.classroomIds.includes(classroom.id)}
-                              onChange={(e) => handleClassroomChange(classroom.id, e.target.checked)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              disabled={isSubmitting}
-                            />
-                            <span className="text-sm text-gray-700">
-                              {classroom.name} ({classroom.academicYear}) - {classroom.currentStudents} students
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                      {formErrors.classroomIds && (
-                        <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
-                          {ICONS.Alert}
-                          {formErrors.classroomIds}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {formData.recipientType === 'INDIVIDUAL' && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                      <p className="text-sm text-yellow-800">
-                        Individual recipient selection feature coming soon. For now, please use Role or Classroom selection.
+                      {teachers.filter(t => t.id !== classMaster?.id).map(teacher => (
+                        <option key={teacher.id} value={teacher.id}>
+                          {teacher.firstName} {teacher.lastName} ({teacher.subjects.map(s => s.name).join(', ') || 'Teacher'})
+                        </option>
+                      ))}
+                    </select>
+                    {formErrors.recipientTeacherId && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        {ICONS.Alert}
+                        {formErrors.recipientTeacherId}
                       </p>
-                    </div>
-                  )}
-                </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Select the teacher you want to send a message to. The class master is pre-selected for your convenience.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Recipients
+                    </label>
+                    <select
+                      value={formData.recipientType}
+                      onChange={(e) => {
+                        setFormData({ 
+                          ...formData, 
+                          recipientType: e.target.value as Notification['recipientType'],
+                          recipientRoles: [],
+                          classroomIds: []
+                        });
+                        setFormErrors({});
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                      disabled={isSubmitting}
+                    >
+                      <option value="ALL">All Users</option>
+                      <option value="ROLE">Specific Roles</option>
+                      <option value="CLASS">Specific Classrooms</option>
+                      <option value="INDIVIDUAL">Individual Recipients</option>
+                    </select>
+
+                    {formData.recipientType === 'ROLE' && (
+                      <div className="space-y-2 p-4 bg-gray-50 rounded-md border border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Roles:</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.values(UserRole).map(role => (
+                            <label key={role} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={formData.recipientRoles.includes(role)}
+                                onChange={(e) => handleRoleChange(role, e.target.checked)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                disabled={isSubmitting}
+                              />
+                              <span className="text-sm text-gray-700">{formatUserRole(role)}</span>
+                            </label>
+                          ))}
+                        </div>
+                        {formErrors.recipientRoles && (
+                          <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
+                            {ICONS.Alert}
+                            {formErrors.recipientRoles}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {formData.recipientType === 'CLASS' && (
+                      <div className="space-y-2 p-4 bg-gray-50 rounded-md border border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Classrooms:</label>
+                        <div className="max-h-48 overflow-y-auto space-y-2">
+                          {classrooms.map(classroom => (
+                            <label key={classroom.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={formData.classroomIds.includes(classroom.id)}
+                                onChange={(e) => handleClassroomChange(classroom.id, e.target.checked)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                disabled={isSubmitting}
+                              />
+                              <span className="text-sm text-gray-700">
+                                {classroom.name} ({classroom.academicYear}) - {classroom.currentStudents} students
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        {formErrors.classroomIds && (
+                          <p className="text-red-600 text-xs mt-2 flex items-center gap-1">
+                            {ICONS.Alert}
+                            {formErrors.classroomIds}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {formData.recipientType === 'INDIVIDUAL' && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-sm text-yellow-800">
+                          Individual recipient selection feature coming soon. For now, please use Role or Classroom selection.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </form>
 
@@ -670,12 +908,12 @@ export default function SendNotificationsPage() {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    Sending...
+                    {isParent ? 'Sending...' : 'Sending...'}
                   </>
                 ) : (
                   <>
                     {ICONS.Bell}
-                    Send Notification
+                    {isParent ? 'Send Message' : 'Send Notification'}
                   </>
                 )}
               </button>

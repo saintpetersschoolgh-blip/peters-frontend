@@ -40,7 +40,10 @@ import {
   Users2,
   TrendingDown,
   Award,
-  Plus
+  Plus,
+  Upload,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Student, Teacher, PaymentStatus, Exam, AttendanceRecord, FeeRecord } from './types';
 
@@ -73,6 +76,9 @@ export const ICONS = {
   Bell: (props?: any) => <Bell size={18} {...props} />,
   AlertTriangle: (props?: any) => <AlertCircle size={18} {...props} />,
   Add: (props?: any) => <Plus size={18} {...props} />,
+  Import: (props?: any) => <Upload size={18} {...props} />,
+  Sun: (props?: any) => <Sun size={18} {...props} />,
+  Moon: (props?: any) => <Moon size={18} {...props} />,
 
   // Analytics
   Trending: (props?: any) => <TrendingUp size={18} {...props} />,

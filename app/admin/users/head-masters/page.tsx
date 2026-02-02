@@ -25,6 +25,77 @@ interface HeadMasterFormData {
   status: StaffStatus;
 }
 
+type SidebarConfig = {
+  enabled: boolean;
+  allowed: string[];
+};
+
+const SIDEBAR_CONFIG_KEY = 'headMasterSidebarConfig';
+
+const SIDEBAR_SECTIONS = [
+  {
+    title: 'Dashboard',
+    items: [{ path: '/head-master', label: 'Dashboard' }],
+  },
+  {
+    title: 'Approvals',
+    items: [{ path: '/head-master/approvals/exam-results', label: 'Exam Approvals' }],
+  },
+  {
+    title: 'User Management',
+    items: [
+      { path: '/users', label: 'User Management' },
+      { path: '/students', label: 'Student Management' },
+      { path: '/admin/users/teachers', label: 'Teacher Management' },
+      { path: '/admin/users/head-masters', label: 'Head Master Management' },
+      { path: '/admin/users/parents', label: 'Parent Management' },
+    ],
+  },
+  {
+    title: 'Academic Management',
+    items: [
+      { path: '/classrooms', label: 'Classrooms' },
+      { path: '/subjects', label: 'Subjects' },
+      { path: '/academic/exams', label: 'Exams' },
+      { path: '/academic/results', label: 'Exam Results' },
+    ],
+  },
+  {
+    title: 'Attendance Management',
+    items: [
+      { path: '/attendance/students', label: 'Student Attendance' },
+      { path: '/attendance/teachers', label: 'Teacher Attendance' },
+    ],
+  },
+  {
+    title: 'Financial Management',
+    items: [
+      { path: '/finance/fees', label: 'Fee Structure' },
+      { path: '/finance/payments', label: 'Fee Payments' },
+    ],
+  },
+  {
+    title: 'Communication',
+    items: [
+      { path: '/notifications/send', label: 'Send Notifications' },
+      { path: '/notifications/flagged', label: 'Flagged Items' },
+    ],
+  },
+  {
+    title: 'Setups',
+    items: [
+      { path: '/admin/setups/academic-year', label: 'Academic Year' },
+      { path: '/admin/setups/terms', label: 'Term' },
+      { path: '/admin/setups/classrooms', label: 'ClassRoom' },
+      { path: '/admin/setups/subjects', label: 'Subject' },
+      { path: '/admin/setups/periods', label: 'Period' },
+      { path: '/admin/setups/grade-levels', label: 'Grade Level' },
+    ],
+  },
+];
+
+const ALL_HEADMASTER_PATHS = SIDEBAR_SECTIONS.flatMap((section) => section.items.map((item) => item.path));
+
 export default function HeadMasterManagementPage() {
   const [headMasters, setHeadMasters] = useState<HeadMasterRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +117,8 @@ export default function HeadMasterManagementPage() {
   });
 
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof HeadMasterFormData, string>>>({});
+  const [selectedAccessEmail, setSelectedAccessEmail] = useState<string>('');
+  const [sidebarAccess, setSidebarAccess] = useState<SidebarConfig>({ enabled: false, allowed: ALL_HEADMASTER_PATHS });
 
   useEffect(() => {
     const mock: HeadMasterRecord[] = [
@@ -73,9 +146,25 @@ export default function HeadMasterManagementPage() {
 
     setTimeout(() => {
       setHeadMasters(mock);
+      setSelectedAccessEmail(mock[0]?.email || '');
       setLoading(false);
     }, 200);
   }, []);
+
+  useEffect(() => {
+    if (!selectedAccessEmail) return;
+    try {
+      const raw = localStorage.getItem(SIDEBAR_CONFIG_KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, SidebarConfig>) : {};
+      const current = map[selectedAccessEmail] || { enabled: false, allowed: ALL_HEADMASTER_PATHS };
+      setSidebarAccess({
+        enabled: Boolean(current.enabled),
+        allowed: current.allowed?.length ? current.allowed : ALL_HEADMASTER_PATHS,
+      });
+    } catch {
+      setSidebarAccess({ enabled: false, allowed: ALL_HEADMASTER_PATHS });
+    }
+  }, [selectedAccessEmail]);
 
   const filtered = useMemo(() => {
     return headMasters.filter((h) => {
@@ -157,6 +246,52 @@ export default function HeadMasterManagementPage() {
     );
   };
 
+  const saveSidebarAccess = (next: SidebarConfig) => {
+    if (!selectedAccessEmail) return;
+    setSidebarAccess(next);
+    try {
+      const raw = localStorage.getItem(SIDEBAR_CONFIG_KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, SidebarConfig>) : {};
+      map[selectedAccessEmail] = next;
+      localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify(map));
+      window.dispatchEvent(new Event('headmaster-sidebar-updated'));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const toggleAccessItem = (path: string) => {
+    const exists = sidebarAccess.allowed.includes(path);
+    const next = exists
+      ? sidebarAccess.allowed.filter((p) => p !== path)
+      : [...sidebarAccess.allowed, path];
+    saveSidebarAccess({ ...sidebarAccess, allowed: next });
+  };
+
+  const toggleAccessSection = (sectionTitle: string) => {
+    const section = SIDEBAR_SECTIONS.find((s) => s.title === sectionTitle);
+    if (!section) return;
+
+    const sectionPaths = section.items.map((item) => item.path);
+    const allChecked = sectionPaths.every((path) => sidebarAccess.allowed.includes(path));
+
+    let next: string[];
+    if (allChecked) {
+      // Uncheck parent: remove all children
+      next = sidebarAccess.allowed.filter((p) => !sectionPaths.includes(p));
+    } else {
+      // Check parent: add all children
+      const newPaths = sectionPaths.filter((p) => !sidebarAccess.allowed.includes(p));
+      next = [...sidebarAccess.allowed, ...newPaths];
+    }
+    saveSidebarAccess({ ...sidebarAccess, allowed: next });
+  };
+
+  const toggleAccessEnabled = (enabled: boolean) => {
+    const allowed = sidebarAccess.allowed.length ? sidebarAccess.allowed : ALL_HEADMASTER_PATHS;
+    saveSidebarAccess({ enabled, allowed });
+  };
+
   const confirmDelete = async () => {
     if (!selected) return;
     setIsSubmitting(true);
@@ -223,6 +358,79 @@ export default function HeadMasterManagementPage() {
               Export
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Headmaster Sidebar Access</h3>
+            <p className="text-sm text-gray-600">Select what appears on the headmaster sidebar.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              checked={sidebarAccess.enabled}
+              onChange={(e) => toggleAccessEnabled(e.target.checked)}
+            />
+            Enable custom sidebar
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Headmaster</label>
+            <select
+              value={selectedAccessEmail}
+              onChange={(e) => setSelectedAccessEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {headMasters.map((h) => (
+                <option key={h.id} value={h.email}>
+                  {h.firstName} {h.lastName} ({h.email})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {SIDEBAR_SECTIONS.map((section) => {
+            const sectionPaths = section.items.map((item) => item.path);
+            const allChecked = sectionPaths.every((path) => sidebarAccess.allowed.includes(path));
+            const someChecked = sectionPaths.some((path) => sidebarAccess.allowed.includes(path));
+
+            return (
+              <div key={section.title} className="border border-gray-200 rounded-lg p-4">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={allChecked}
+                    ref={(input) => {
+                      if (input) input.indeterminate = someChecked && !allChecked;
+                    }}
+                    onChange={() => toggleAccessSection(section.title)}
+                  />
+                  {section.title}
+                </label>
+                <div className="space-y-2 ml-6">
+                  {section.items.map((item) => (
+                    <label key={item.path} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={sidebarAccess.allowed.includes(item.path)}
+                        onChange={() => toggleAccessItem(item.path)}
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { TeacherAttendance, AttendanceStatus, Teacher } from '../../../types';
 import { ICONS } from '../../../constants';
 
@@ -14,6 +15,8 @@ export default function TeacherAttendancePage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Modal states
   const [showMarkAttendance, setShowMarkAttendance] = useState(false);
@@ -123,6 +126,90 @@ export default function TeacherAttendancePage() {
       case AttendanceStatus.PERMISSION: return ICONS.UserCheck;
       default: return null;
     }
+  };
+
+  const normalizeStatus = (value: string): AttendanceStatus => {
+    const normalized = value.trim().toUpperCase();
+    if (normalized.startsWith('P')) return AttendanceStatus.PRESENT;
+    if (normalized.startsWith('A')) return AttendanceStatus.ABSENT;
+    if (normalized.startsWith('L')) return AttendanceStatus.LATE;
+    if (normalized.startsWith('PER')) return AttendanceStatus.PERMISSION;
+    return AttendanceStatus.PRESENT;
+  };
+
+  const handleImportClick = () => {
+    setImportError(null);
+    importInputRef.current?.click();
+  };
+
+  const handleImportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = reader.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, string | number>>(worksheet, { defval: '' });
+
+        if (!rows.length) {
+          setImportError('The import file is empty.');
+          return;
+        }
+
+        const newAttendances: TeacherAttendance[] = [];
+        const errors: string[] = [];
+
+        rows.forEach((row, index) => {
+          const staffNumber = String(row.staffNumber || row.StaffNumber || row.staff_no || row.StaffNo || '').trim();
+          const teacherId = String(row.teacherId || row.TeacherId || row.teacherID || '').trim();
+          const date = String(row.date || row.Date || row.attendanceDate || row.AttendanceDate || selectedDate).trim();
+          const statusRaw = String(row.status || row.Status || row.attendance || row.Attendance || 'PRESENT').trim();
+          const remarks = String(row.remarks || row.Remarks || row.note || row.Note || '').trim();
+
+          const teacher =
+            (teacherId && teachers.find(t => t.id === teacherId)) ||
+            (staffNumber && teachers.find(t => t.staffNumber === staffNumber));
+
+          if (!teacher) {
+            errors.push(`Row ${index + 2}: teacher not found.`);
+            return;
+          }
+
+          newAttendances.push({
+            id: `import_${teacher.id}_${Date.now()}_${index}`,
+            teacherId: teacher.id,
+            teacher,
+            date,
+            status: normalizeStatus(statusRaw),
+            remarks: remarks || undefined,
+            markedById: 'hikvision-import',
+            isApproved: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        });
+
+        if (errors.length) {
+          setImportError(errors.slice(0, 3).join(' '));
+          return;
+        }
+
+        setAttendances(prev => [...newAttendances, ...prev]);
+      } catch (err) {
+        setImportError('Failed to import file. Please verify the format.');
+      } finally {
+        if (importInputRef.current) importInputRef.current.value = '';
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Failed to read the file.');
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   // Modal handlers
@@ -241,17 +328,33 @@ export default function TeacherAttendancePage() {
           <h1 className="text-3xl font-bold text-gray-900">Teacher Attendance</h1>
           <p className="text-gray-600 mt-1">Manage teacher attendance records</p>
         </div>
-        <button
-          onClick={handleMarkAttendance}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          {ICONS.Add}
-          Mark Attendance
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,.xlsx"
+            className="hidden"
+            onChange={handleImportChange}
+          />
+          <button
+            onClick={handleImportClick}
+            className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            {ICONS.Import}
+            Import
+          </button>
+          <button
+            onClick={handleMarkAttendance}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            {ICONS.Add}
+            Mark Attendance
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
@@ -268,6 +371,10 @@ export default function TeacherAttendancePage() {
             </button>
           </div>
         </div>
+        <div className="text-xs text-gray-500">
+          Import columns: <span className="font-semibold">staffNumber</span> or <span className="font-semibold">teacherId</span>, <span className="font-semibold">date</span> (optional), <span className="font-semibold">status</span>, <span className="font-semibold">remarks</span>.
+        </div>
+        {importError && <div className="text-sm text-red-600">{importError}</div>}
       </div>
 
       {/* Attendance Summary */}

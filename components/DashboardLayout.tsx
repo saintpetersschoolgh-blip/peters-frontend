@@ -65,7 +65,7 @@ export default function DashboardLayout({
       >
         <Header onMenuToggle={() => setIsSidebarOpen(true)} />
         <div className="flex-1 relative">
-          <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="w-full px-2 py-0">
             {children}
           </div>
         </div>

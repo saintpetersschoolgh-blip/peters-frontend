@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { ExamResult, Exam, Student } from '../../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ExamResult, Exam, Student, UserRole } from '../../../types';
 import { ICONS } from '../../../constants';
+import { useAuth } from '../../../lib/auth-context';
 
 interface ExamResultFormData {
   examId: string;
@@ -19,9 +20,16 @@ interface BulkResultEntry {
 }
 
 export default function ExamResultsPage() {
+  const { user } = useAuth();
+  const isParent = user?.role === UserRole.PARENT;
+  const isStudent = user?.role === UserRole.STUDENT;
+  const canApprove = user?.role === UserRole.HEAD_MASTER;
+  const canEdit = user?.role === UserRole.ADMIN || user?.role === UserRole.HEAD_MASTER || user?.role === UserRole.TEACHER;
   const [results, setResults] = useState<ExamResult[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [children, setChildren] = useState<Student[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExam, setSelectedExam] = useState<string>('ALL');
@@ -32,6 +40,25 @@ export default function ExamResultsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRemarksModal, setShowRemarksModal] = useState(false);
   const [selectedResult, setSelectedResult] = useState<ExamResult | null>(null);
+  const IMPORTED_RESULTS_KEY = 'importedExamResults';
+
+  const loadImportedResults = () => {
+    try {
+      const raw = localStorage.getItem(IMPORTED_RESULTS_KEY);
+      return raw ? (JSON.parse(raw) as ExamResult[]) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const persistImportedResults = (items: ExamResult[]) => {
+    try {
+      const imported = items.filter(r => String(r.id).startsWith('import_'));
+      localStorage.setItem(IMPORTED_RESULTS_KEY, JSON.stringify(imported));
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   // Bulk entry state
   const [selectedExamForEntry, setSelectedExamForEntry] = useState<string>('');
@@ -138,22 +165,59 @@ export default function ExamResultsPage() {
       },
     ];
 
+    // Mock children for parent
+    const mockChildren: Student[] = isParent ? [
+      {
+        id: 's001',
+        admissionNumber: 'STU001',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@school.com',
+        classroomId: 'c001',
+        isActive: true,
+        enrolledAt: '2024-01-01',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        gender: 'MALE',
+        dateOfBirth: '2008-05-15',
+        phoneNumber: '+1234567890',
+        address: '123 Main St',
+        emergencyContact: 'Parent Contact',
+      },
+    ] : [];
+
     // Simulate loading delay
     setTimeout(() => {
       setStudents(mockStudents);
       setExams(mockExams);
-      setResults(mockResults);
+      if (isParent) {
+        setChildren(mockChildren);
+        setSelectedChildId(mockChildren[0]?.id || '');
+      }
+      const stored = loadImportedResults();
+      setResults([...mockResults, ...stored]);
       setLoading(false);
     }, 200);
-  }, []);
+  }, [isParent]);
 
-  const filteredResults = results.filter(result => {
-    const matchesSearch = `${result.student?.firstName} ${result.student?.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         result.student?.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         result.exam?.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesExam = selectedExam === 'ALL' || result.examId === selectedExam;
-    return matchesSearch && matchesExam;
-  });
+  const filteredResults = useMemo(() => {
+    return results.filter(result => {
+      // Filter by child for parents
+      if (isParent && selectedChildId && result.studentId !== selectedChildId) {
+        return false;
+      }
+      // Filter by student for students
+      if (isStudent && user?.studentId && result.studentId !== user.studentId) {
+        return false;
+      }
+      
+      const matchesSearch = `${result.student?.firstName} ${result.student?.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           result.student?.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           result.exam?.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesExam = selectedExam === 'ALL' || result.examId === selectedExam;
+      return matchesSearch && matchesExam;
+    });
+  }, [results, isParent, selectedChildId, isStudent, user?.studentId, searchTerm, selectedExam]);
 
   const getGradeColor = (grade: string) => {
     if (grade.startsWith('A')) return 'bg-green-100 text-green-800';
@@ -295,7 +359,11 @@ export default function ExamResultsPage() {
           remarks: formData.remarks,
           updatedAt: new Date().toISOString(),
         };
-        setResults(prev => prev.map(r => r.id === selectedResult.id ? updatedResult : r));
+        setResults(prev => {
+          const next = prev.map(r => (r.id === selectedResult.id ? updatedResult : r));
+          persistImportedResults(next);
+          return next;
+        });
         setShowEditModal(false);
       } else {
         // Add new result
@@ -313,7 +381,11 @@ export default function ExamResultsPage() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        setResults(prev => [...prev, newResult]);
+        setResults(prev => {
+          const next = [...prev, newResult];
+          persistImportedResults(next);
+          return next;
+        });
         setShowEditModal(false);
       }
     } catch (error) {
@@ -352,7 +424,9 @@ export default function ExamResultsPage() {
       // Remove existing results for this exam and add new ones
       setResults(prev => {
         const filtered = prev.filter(r => r.examId !== selectedExamForEntry);
-        return [...filtered, ...newResults];
+        const next = [...filtered, ...newResults];
+        persistImportedResults(next);
+        return next;
       });
 
       setShowEnterResults(false);
@@ -369,7 +443,11 @@ export default function ExamResultsPage() {
 
     setIsSubmitting(true);
     try {
-      setResults(prev => prev.filter(r => r.id !== selectedResult.id));
+      setResults(prev => {
+        const next = prev.filter(r => r.id !== selectedResult.id);
+        persistImportedResults(next);
+        return next;
+      });
       setShowDeleteModal(false);
       setSelectedResult(null);
     } catch (error) {
@@ -386,11 +464,28 @@ export default function ExamResultsPage() {
         isPublished: true,
         updatedAt: new Date().toISOString(),
       };
-      setResults(prev => prev.map(r => r.id === result.id ? updatedResult : r));
+      setResults(prev => {
+        const next = prev.map(r => (r.id === result.id ? updatedResult : r));
+        persistImportedResults(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error publishing result:', error);
     }
   };
+
+  const stats = useMemo(() => {
+    const all = filteredResults;
+    const published = all.filter(r => r.isPublished);
+    const average = published.length > 0
+      ? Math.round(published.reduce((sum, r) => sum + getScorePercentage(r.score, r.exam?.totalScore || 0), 0) / published.length)
+      : 0;
+    return {
+      total: all.length,
+      published: published.length,
+      average,
+    };
+  }, [filteredResults]);
 
   if (loading) {
     return (
@@ -403,19 +498,65 @@ export default function ExamResultsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Exam Results</h1>
-          <p className="text-gray-600 mt-1">View and manage examination results</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isParent ? 'Academic Progress' : isStudent ? 'My Results' : 'Exam Results'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {isParent ? 'View your child\'s academic performance and exam results' :
+             isStudent ? 'View your exam results and academic performance' :
+             'Headmaster approval for submitted results'}
+          </p>
         </div>
-        <button
-          onClick={handleEnterResults}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          {ICONS.Add}
-          Enter Results
-        </button>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleEnterResults}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              {ICONS.Add}
+              Enter Results
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Child Selection for Parents */}
+      {isParent && children.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+          <select
+            value={selectedChildId}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.firstName} {child.lastName} - {child.admissionNumber}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Statistics for Parents/Students */}
+      {(isParent || isStudent) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow p-4 border border-slate-200">
+            <div className="text-sm text-slate-500">Total Results</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</div>
+          </div>
+          <div className="bg-green-50 rounded-lg shadow p-4 border border-green-200">
+            <div className="text-sm text-green-700">Published</div>
+            <div className="text-2xl font-bold text-green-900 mt-1">{stats.published}</div>
+          </div>
+          <div className="bg-blue-50 rounded-lg shadow p-4 border border-blue-200">
+            <div className="text-sm text-blue-700">Average Score</div>
+            <div className="text-2xl font-bold text-blue-900 mt-1">{stats.average}%</div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -478,7 +619,7 @@ export default function ExamResultsPage() {
                   Grade
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Approval
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -539,43 +680,61 @@ export default function ExamResultsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      result.isPublished ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {result.isPublished ? 'Published' : 'Draft'}
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        result.isPublished ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {result.isPublished ? 'Approved' : 'Pending approval'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditResult(result)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </button>
-                      {!result.isPublished && (
+                    {canEdit ? (
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => handlePublishResult(result)}
-                          className="text-green-600 hover:text-green-900"
+                          onClick={() => handleEditResult(result)}
+                          className="text-blue-600 hover:text-blue-900"
                         >
-                          Publish
+                          Edit
                         </button>
-                      )}
-                      {result.remarks && (
+                        {!result.isPublished && canApprove && (
+                          <button
+                            onClick={() => handlePublishResult(result)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {result.remarks && (
+                          <button
+                            onClick={() => handleViewRemarks(result)}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            Remarks
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleViewRemarks(result)}
-                          className="text-gray-600 hover:text-gray-900"
+                          onClick={() => handleDeleteResult(result)}
+                          className="text-red-600 hover:text-red-900"
                         >
-                          Remarks
+                          Delete
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteResult(result)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        {result.remarks && (
+                          <button
+                            onClick={() => handleViewRemarks(result)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View Remarks
+                          </button>
+                        )}
+                        {!result.remarks && (
+                          <span className="text-gray-400 text-xs">No remarks</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
