@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from '../lib/navigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -15,19 +15,31 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
+  const [isResizing, setIsResizing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   // Handle mounting
   useEffect(() => {
     setIsMounted(true);
 
-    // Persist collapse state
+    // Load saved sidebar state
     try {
       const savedCollapse = localStorage.getItem('sidebarCollapsed') === 'true';
       setIsCollapsed(savedCollapse);
+      
+      const savedWidth = localStorage.getItem('sidebarWidth');
+      if (savedWidth) {
+        const width = parseInt(savedWidth, 10);
+        if (width >= 200 && width <= 500) {
+          setSidebarWidth(width);
+        }
+      }
     } catch {
-      // ignore storage errors (e.g. blocked storage)
+      // ignore storage errors
       setIsCollapsed(false);
     }
   }, []);
@@ -47,30 +59,98 @@ export default function DashboardLayout({
     }
   };
 
+  // Handle resize
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!sidebarRef.current) return;
+      
+      const rect = sidebarRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+      
+      // Constrain width between 200px and 500px
+      const constrainedWidth = Math.max(200, Math.min(500, newWidth));
+      setSidebarWidth(constrainedWidth);
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem('sidebarWidth', String(constrainedWidth));
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   if (!isMounted) return null;
+
+  const effectiveWidth = isCollapsed ? 80 : sidebarWidth;
 
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-x-hidden">
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        isCollapsed={isCollapsed}
-        onToggleCollapse={toggleCollapse}
-      />
+      <div
+        ref={sidebarRef}
+        className="relative"
+        style={{ width: 0, minWidth: 0, maxWidth: 0 }}
+      >
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleCollapse}
+          width={effectiveWidth}
+        />
+        
+        {/* Resize Handle */}
+        {!isCollapsed && (
+          <div
+            ref={resizeHandleRef}
+            onMouseDown={handleMouseDown}
+            className={`fixed top-0 h-full cursor-col-resize bg-transparent hover:bg-blue-500 transition-colors z-50 ${
+              isResizing ? 'bg-blue-500' : ''
+            }`}
+            style={{ 
+              userSelect: 'none', 
+              left: `${effectiveWidth}px`, 
+              width: '4px',
+              marginLeft: '-2px'
+            }}
+            title="Drag to resize sidebar"
+          >
+            <div className="absolute top-1/2 left-1/2 transform -translate-y-1/2 -translate-x-1/2 w-2 h-12 bg-slate-400 rounded-full opacity-0 hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+      </div>
 
       <main
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
-        }`}
+        className="flex-1 flex flex-col min-w-0 transition-all duration-300"
+        style={{ marginLeft: `${effectiveWidth}px`, width: `calc(100% - ${effectiveWidth}px)`, marginRight: 0, paddingLeft: 0, paddingRight: 0 }}
       >
         <Header onMenuToggle={() => setIsSidebarOpen(true)} />
-        <div className="flex-1 relative">
-          <div className="w-full px-2 py-0">
+        <div className="flex-1 relative overflow-x-hidden" style={{ margin: 0, padding: 0 }}>
+          <div className="w-full h-full" style={{ margin: 0, padding: '0 12px', marginLeft: 0, marginRight: 0 }}>
             {children}
           </div>
         </div>
 
-        <footer className="mt-auto px-6 py-6 text-center text-slate-400 text-xs font-medium border-t border-slate-200 bg-white">
+        <footer className="mt-auto py-6 text-center text-slate-400 text-xs font-medium border-t border-slate-200 bg-white">
           <p>&copy; {new Date().getFullYear()} St. Peter's International school. All rights reserved.</p>
         </footer>
       </main>

@@ -89,7 +89,8 @@ interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 }
 
 export const Link: React.FC<LinkProps> = ({ href, children, replace, onClick, ...props }) => {
-  const { push, replace: routerReplace } = useContext(NavigationContext);
+  const contextValue = useContext(NavigationContext);
+  const { push, replace: routerReplace } = contextValue;
   
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onClick) onClick(e);

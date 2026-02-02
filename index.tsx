@@ -54,6 +54,41 @@ import CreateSubjectSyllabusPage from './app/teachers/syllabus/create/page';
 import TeacherTimetablePage from './app/teachers/timetable/page';
 import PermissionsPage from './app/admin/permissions/page';
 
+// Reports & Analytics Pages
+import BestWorstSubjectsPage from './app/reports/performance/best-worst-subjects/page';
+import BestWorstStudentsPage from './app/reports/performance/best-worst-students/page';
+import MostImprovedSubjectsPage from './app/reports/performance/most-improved-subjects/page';
+import MostImprovedStudentsPage from './app/reports/performance/most-improved-students/page';
+import TeacherTargetsPage from './app/reports/performance/teacher-targets/page';
+import SubjectPerformanceTrendPage from './app/reports/trends/subject-performance/page';
+import StudentPerformanceTrendPage from './app/reports/trends/student-performance/page';
+import ClassPerformanceTrendPage from './app/reports/trends/class-performance/page';
+import AtRiskStudentsPage from './app/reports/risk/at-risk-students/page';
+import AtRiskSubjectsPage from './app/reports/risk/at-risk-subjects/page';
+import TeacherPerformanceRiskPage from './app/reports/risk/teacher-performance-risk/page';
+import ExamFailureForecastPage from './app/reports/risk/exam-failure-forecast/page';
+import TeacherVsSubjectPage from './app/reports/teacher/teacher-vs-subject/page';
+import TeacherConsistencyPage from './app/reports/teacher/teacher-consistency/page';
+import SyllabusCoveragePage from './app/reports/teacher/syllabus-coverage/page';
+import TeacherLoadPage from './app/reports/teacher/teacher-load/page';
+import CAVsExamVariancePage from './app/reports/assessment/ca-vs-exam-variance/page';
+import ResultDistributionPage from './app/reports/assessment/result-distribution/page';
+import TopicalPerformancePage from './app/reports/assessment/topical-performance/page';
+import StudentAttendancePerformancePage from './app/reports/attendance/student-attendance-performance/page';
+import TeacherAttendanceResultsPage from './app/reports/attendance/teacher-attendance-results/page';
+import ClassAttendanceImpactPage from './app/reports/attendance/class-attendance-impact/page';
+import SchoolWideTargetsPage from './app/reports/forecast/school-wide-targets/page';
+import SubjectTargetForecastPage from './app/reports/forecast/subject-target-forecast/page';
+import PromotionReadinessPage from './app/reports/forecast/promotion-readiness/page';
+import ExamReadinessIndexPage from './app/reports/forecast/exam-readiness-index/page';
+import ClassToClassPage from './app/reports/comparisons/class-to-class/page';
+import TeacherToTeacherPage from './app/reports/comparisons/teacher-to-teacher/page';
+import TermToTermPage from './app/reports/comparisons/term-to-term/page';
+import InternalBenchmarkPage from './app/reports/comparisons/internal-benchmark/page';
+import InspectionReportsPage from './app/reports/exports/inspection-reports/page';
+import ExportReportsPage from './app/reports/exports/export-reports/page';
+import AuditTrailPage from './app/reports/exports/audit-trail/page';
+
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -246,6 +281,11 @@ const AppRouter = () => {
         user.role === UserRole.ADMIN ||
         user.role === UserRole.HEAD_MASTER
       );
+    }
+
+    // Reports & Analytics: Admin and Headmaster only
+    if (path.startsWith('/reports/')) {
+      return user.role === UserRole.ADMIN || user.role === UserRole.HEAD_MASTER;
     }
 
     // Unknown path: allow for now if authenticated (will render placeholder)
@@ -659,6 +699,255 @@ const AppRouter = () => {
     );
   }
 
+  // Reports & Analytics Routes - Performance Overview
+  if (pathname === '/reports/performance/best-worst-subjects') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><BestWorstSubjectsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/performance/best-worst-students') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><BestWorstStudentsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/performance/most-improved-subjects') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><MostImprovedSubjectsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/performance/most-improved-students') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><MostImprovedStudentsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/performance/teacher-targets') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherTargetsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Trends & Growth
+  if (pathname === '/reports/trends/subject-performance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><SubjectPerformanceTrendPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/trends/student-performance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><StudentPerformanceTrendPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/trends/class-performance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ClassPerformanceTrendPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Risk & Alerts
+  if (pathname === '/reports/risk/at-risk-students') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><AtRiskStudentsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/risk/at-risk-subjects') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><AtRiskSubjectsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/risk/teacher-performance-risk') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherPerformanceRiskPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/risk/exam-failure-forecast') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ExamFailureForecastPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Teacher Effectiveness
+  if (pathname === '/reports/teacher/teacher-vs-subject') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherVsSubjectPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/teacher/teacher-consistency') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherConsistencyPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/teacher/syllabus-coverage') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><SyllabusCoveragePage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/teacher/teacher-load') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherLoadPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Assessment Quality
+  if (pathname === '/reports/assessment/ca-vs-exam-variance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><CAVsExamVariancePage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/assessment/result-distribution') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ResultDistributionPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/assessment/topical-performance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TopicalPerformancePage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Attendance Impact
+  if (pathname === '/reports/attendance/student-attendance-performance') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><StudentAttendancePerformancePage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/attendance/teacher-attendance-results') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherAttendanceResultsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/attendance/class-attendance-impact') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ClassAttendanceImpactPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Forecast & Targets
+  if (pathname === '/reports/forecast/school-wide-targets') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><SchoolWideTargetsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/forecast/subject-target-forecast') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><SubjectTargetForecastPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/forecast/promotion-readiness') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><PromotionReadinessPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/forecast/exam-readiness-index') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ExamReadinessIndexPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Comparisons
+  if (pathname === '/reports/comparisons/class-to-class') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ClassToClassPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/comparisons/teacher-to-teacher') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TeacherToTeacherPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/comparisons/term-to-term') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><TermToTermPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/comparisons/internal-benchmark') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><InternalBenchmarkPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
+  // Reports & Analytics Routes - Exports & Audit
+  if (pathname === '/reports/exports/inspection-reports') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><InspectionReportsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/exports/export-reports') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><ExportReportsPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+  if (pathname === '/reports/exports/audit-trail') {
+    return (
+      <DashboardLayout>
+        <ErrorBoundary><AuditTrailPage /></ErrorBoundary>
+      </DashboardLayout>
+    );
+  }
+
   // Handle remaining routes with dashboard layout (for future development)
   return (
     <DashboardLayout>
@@ -675,8 +964,13 @@ const AppRouter = () => {
 };
 
 // Handle hot reloading properly
-const container = document.getElementById('root');
-if (container) {
+function initApp() {
+  const container = document.getElementById('root');
+  if (!container) {
+    console.error('Root element not found');
+    return;
+  }
+
   // Clear any existing content to prevent hydration issues
   container.innerHTML = '';
 
@@ -694,4 +988,11 @@ if (container) {
       </AuthProvider>
     </React.StrictMode>
   );
+}
+
+// Wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }

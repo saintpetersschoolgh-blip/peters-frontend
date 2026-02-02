@@ -12,13 +12,15 @@ interface SidebarProps {
   onClose: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  width?: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  width = 256
 }) => {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
@@ -90,11 +92,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     'headmaster-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/attendance/teachers'),
     'headmaster-academics': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/teachers/syllabus') || pathname.startsWith('/teachers/timetable'),
     'headmaster-exams': pathname.startsWith('/academic/exams') || pathname.startsWith('/academic/results'),
-    'headmaster-reports': pathname.startsWith('/academic/results'),
+    'headmaster-reports': pathname.startsWith('/reports') || pathname.startsWith('/academic/results'),
     'headmaster-finance': pathname.startsWith('/finance'),
     'headmaster-communication': pathname.startsWith('/notifications'),
-    'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
-    'headmaster-settings': pathname === '/users' || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
+      'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
       // Admin menus
       'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
       'admin-academic': pathname.startsWith('/academic'),
@@ -130,11 +131,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       'headmaster-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/attendance/teachers'),
       'headmaster-academics': pathname === '/classrooms' || pathname === '/subjects' || pathname.startsWith('/teachers/timetable'),
       'headmaster-exams': pathname.startsWith('/academic/exams') || pathname.startsWith('/academic/results'),
-      'headmaster-reports': pathname.startsWith('/academic/results'),
+      'headmaster-reports': pathname.startsWith('/reports') || pathname.startsWith('/academic/results'),
       'headmaster-finance': pathname.startsWith('/finance'),
       'headmaster-communication': pathname.startsWith('/notifications'),
       'headmaster-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
-      'headmaster-settings': pathname === '/users' || pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
       // Admin menus
       'admin-users': pathname === '/users' || pathname === '/students' || pathname.startsWith('/admin/users'),
       'admin-academic': pathname.startsWith('/academic'),
@@ -142,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       'admin-finance': pathname.startsWith('/finance'),
       'admin-communication': pathname.startsWith('/notifications'),
       'admin-staff': pathname.startsWith('/admin/users/teachers') || pathname.startsWith('/admin/users/head-masters') || pathname.startsWith('/attendance/teachers'),
-      'admin-reports': pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
+      'admin-reports': pathname.startsWith('/reports') || pathname.startsWith('/academic/results') || pathname.startsWith('/attendance/students') || pathname.startsWith('/attendance/teachers'),
       'admin-approvals': pathname.startsWith('/head-master/approvals') || pathname.startsWith('/teachers/syllabus'),
       'admin-settings': pathname.startsWith('/admin/permissions') || pathname.startsWith('/admin/setups'),
       // Teacher menus
@@ -270,7 +270,102 @@ const Sidebar: React.FC<SidebarProps> = ({
       key: 'headmaster-reports',
       roles: [UserRole.HEAD_MASTER],
       submenu: [
-        { path: '/academic/results', label: 'Performance Analytics', icon: ICONS.BarChart },
+        {
+          label: 'Performance Overview',
+          key: 'reports-performance',
+          icon: ICONS.Trophy,
+          subsubmenu: [
+            { path: '/reports/performance/best-worst-subjects', label: 'Best & Worst Performing Subjects', icon: ICONS.BarChart },
+            { path: '/reports/performance/best-worst-students', label: 'Best & Worst Performing Students', icon: ICONS.Students },
+            { path: '/reports/performance/most-improved-subjects', label: 'Most Improved Subjects', icon: ICONS.Trending },
+            { path: '/reports/performance/most-improved-students', label: 'Most Improved Students', icon: ICONS.Trending },
+            { path: '/reports/performance/teacher-targets', label: 'Teacher Target Tracking', icon: ICONS.Target },
+          ],
+        },
+        {
+          label: 'Trends & Growth',
+          key: 'reports-trends',
+          icon: ICONS.Trending,
+          subsubmenu: [
+            { path: '/reports/trends/subject-performance', label: 'Subject Performance Trend', icon: ICONS.LineChart },
+            { path: '/reports/trends/student-performance', label: 'Student Performance Trend', icon: ICONS.LineChart },
+            { path: '/reports/trends/class-performance', label: 'Class Performance Trend', icon: ICONS.LineChart },
+          ],
+        },
+        {
+          label: 'Risk & Alerts',
+          key: 'reports-risk',
+          icon: ICONS.AlertTriangle,
+          subsubmenu: [
+            { path: '/reports/risk/at-risk-students', label: 'At-Risk Students Report', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/at-risk-subjects', label: 'At-Risk Subjects', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/teacher-performance-risk', label: 'Teacher Performance Risk', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/exam-failure-forecast', label: 'Exam Failure Probability Forecast', icon: ICONS.Activity },
+          ],
+        },
+        {
+          label: 'Teacher Effectiveness',
+          key: 'reports-teacher',
+          icon: ICONS.Teachers,
+          subsubmenu: [
+            { path: '/reports/teacher/teacher-vs-subject', label: 'Teacher vs Subject Performance', icon: ICONS.BarChart },
+            { path: '/reports/teacher/teacher-consistency', label: 'Teacher Consistency Report', icon: ICONS.Activity },
+            { path: '/reports/teacher/syllabus-coverage', label: 'Syllabus Coverage vs Results', icon: ICONS.Book },
+            { path: '/reports/teacher/teacher-load', label: 'Teacher Load vs Performance', icon: ICONS.Briefcase },
+          ],
+        },
+        {
+          label: 'Assessment Quality',
+          key: 'reports-assessment',
+          icon: ICONS.FileText,
+          subsubmenu: [
+            { path: '/reports/assessment/ca-vs-exam-variance', label: 'CA vs Exam Variance Report', icon: ICONS.BarChart },
+            { path: '/reports/assessment/result-distribution', label: 'Result Distribution Report', icon: ICONS.BarChart },
+            { path: '/reports/assessment/topical-performance', label: 'Topical Performance Analysis', icon: ICONS.Book },
+          ],
+        },
+        {
+          label: 'Attendance Impact',
+          key: 'reports-attendance',
+          icon: ICONS.UserCheck,
+          subsubmenu: [
+            { path: '/reports/attendance/student-attendance-performance', label: 'Student Attendance vs Performance', icon: ICONS.UserCheck },
+            { path: '/reports/attendance/teacher-attendance-results', label: 'Teacher Attendance vs Results', icon: ICONS.UserCheck },
+            { path: '/reports/attendance/class-attendance-impact', label: 'Class Attendance Impact Report', icon: ICONS.UserCheck },
+          ],
+        },
+        {
+          label: 'Forecast & Targets',
+          key: 'reports-forecast',
+          icon: ICONS.Target,
+          subsubmenu: [
+            { path: '/reports/forecast/school-wide-targets', label: 'School-Wide Target Achievement', icon: ICONS.Target },
+            { path: '/reports/forecast/subject-target-forecast', label: 'Subject Target Forecast', icon: ICONS.Target },
+            { path: '/reports/forecast/promotion-readiness', label: 'Promotion Readiness Report', icon: ICONS.Cap },
+            { path: '/reports/forecast/exam-readiness-index', label: 'Exam Readiness Index', icon: ICONS.Book },
+          ],
+        },
+        {
+          label: 'Comparisons',
+          key: 'reports-comparisons',
+          icon: ICONS.Compare,
+          subsubmenu: [
+            { path: '/reports/comparisons/class-to-class', label: 'Class-to-Class Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/teacher-to-teacher', label: 'Teacher-to-Teacher Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/term-to-term', label: 'Term-to-Term Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/internal-benchmark', label: 'Internal Benchmark Report', icon: ICONS.BarChart },
+          ],
+        },
+        {
+          label: 'Exports & Audit',
+          key: 'reports-exports',
+          icon: ICONS.Download,
+          subsubmenu: [
+            { path: '/reports/exports/inspection-reports', label: 'Inspection-Ready Reports', icon: ICONS.FileText },
+            { path: '/reports/exports/export-reports', label: 'Export Reports (PDF/Excel)', icon: ICONS.Download },
+            { path: '/reports/exports/audit-trail', label: 'Audit Trail Report', icon: ICONS.FileSearch },
+          ],
+        },
       ],
     },
     {
@@ -301,17 +396,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       submenu: [
         { path: '/head-master/approvals/exam-results', label: 'Result Approval', icon: ICONS.Check },
         { path: '/head-master/approvals/syllabus-submissions', label: 'Syllabus Submissions', icon: ICONS.Book },
-      ],
-    },
-    {
-      label: 'Settings & Administration',
-      icon: ICONS.Settings,
-      key: 'headmaster-settings',
-      roles: [UserRole.HEAD_MASTER],
-      submenu: [
-        { path: '/users', label: 'User Management', icon: ICONS.User },
-        { path: '/admin/permissions', label: 'Roles & Permissions', icon: ICONS.Settings },
-        { path: '/admin/setups/academic-year', label: 'Academic Year / Term Setup', icon: ICONS.Calendar },
       ],
     },
     // Admin Navigation (keep existing structure)
@@ -385,9 +469,102 @@ const Sidebar: React.FC<SidebarProps> = ({
       key: 'admin-reports',
       roles: [UserRole.ADMIN],
       submenu: [
-        { path: '/academic/results', label: 'Performance Analytics', icon: ICONS.BarChart },
-        { path: '/attendance/students', label: 'Attendance Reports', icon: ICONS.UserCheck },
-        { path: '/attendance/teachers', label: 'Teacher Performance', icon: ICONS.Teachers },
+        {
+          label: 'Performance Overview',
+          key: 'reports-performance',
+          icon: ICONS.Trophy,
+          subsubmenu: [
+            { path: '/reports/performance/best-worst-subjects', label: 'Best & Worst Performing Subjects', icon: ICONS.BarChart },
+            { path: '/reports/performance/best-worst-students', label: 'Best & Worst Performing Students', icon: ICONS.Students },
+            { path: '/reports/performance/most-improved-subjects', label: 'Most Improved Subjects', icon: ICONS.Trending },
+            { path: '/reports/performance/most-improved-students', label: 'Most Improved Students', icon: ICONS.Trending },
+            { path: '/reports/performance/teacher-targets', label: 'Teacher Target Tracking', icon: ICONS.Target },
+          ],
+        },
+        {
+          label: 'Trends & Growth',
+          key: 'reports-trends',
+          icon: ICONS.Trending,
+          subsubmenu: [
+            { path: '/reports/trends/subject-performance', label: 'Subject Performance Trend', icon: ICONS.LineChart },
+            { path: '/reports/trends/student-performance', label: 'Student Performance Trend', icon: ICONS.LineChart },
+            { path: '/reports/trends/class-performance', label: 'Class Performance Trend', icon: ICONS.LineChart },
+          ],
+        },
+        {
+          label: 'Risk & Alerts',
+          key: 'reports-risk',
+          icon: ICONS.AlertTriangle,
+          subsubmenu: [
+            { path: '/reports/risk/at-risk-students', label: 'At-Risk Students Report', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/at-risk-subjects', label: 'At-Risk Subjects', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/teacher-performance-risk', label: 'Teacher Performance Risk', icon: ICONS.AlertTriangle },
+            { path: '/reports/risk/exam-failure-forecast', label: 'Exam Failure Probability Forecast', icon: ICONS.Activity },
+          ],
+        },
+        {
+          label: 'Teacher Effectiveness',
+          key: 'reports-teacher',
+          icon: ICONS.Teachers,
+          subsubmenu: [
+            { path: '/reports/teacher/teacher-vs-subject', label: 'Teacher vs Subject Performance', icon: ICONS.BarChart },
+            { path: '/reports/teacher/teacher-consistency', label: 'Teacher Consistency Report', icon: ICONS.Activity },
+            { path: '/reports/teacher/syllabus-coverage', label: 'Syllabus Coverage vs Results', icon: ICONS.Book },
+            { path: '/reports/teacher/teacher-load', label: 'Teacher Load vs Performance', icon: ICONS.Briefcase },
+          ],
+        },
+        {
+          label: 'Assessment Quality',
+          key: 'reports-assessment',
+          icon: ICONS.FileText,
+          subsubmenu: [
+            { path: '/reports/assessment/ca-vs-exam-variance', label: 'CA vs Exam Variance Report', icon: ICONS.BarChart },
+            { path: '/reports/assessment/result-distribution', label: 'Result Distribution Report', icon: ICONS.BarChart },
+            { path: '/reports/assessment/topical-performance', label: 'Topical Performance Analysis', icon: ICONS.Book },
+          ],
+        },
+        {
+          label: 'Attendance Impact',
+          key: 'reports-attendance',
+          icon: ICONS.UserCheck,
+          subsubmenu: [
+            { path: '/reports/attendance/student-attendance-performance', label: 'Student Attendance vs Performance', icon: ICONS.UserCheck },
+            { path: '/reports/attendance/teacher-attendance-results', label: 'Teacher Attendance vs Results', icon: ICONS.UserCheck },
+            { path: '/reports/attendance/class-attendance-impact', label: 'Class Attendance Impact Report', icon: ICONS.UserCheck },
+          ],
+        },
+        {
+          label: 'Forecast & Targets',
+          key: 'reports-forecast',
+          icon: ICONS.Target,
+          subsubmenu: [
+            { path: '/reports/forecast/school-wide-targets', label: 'School-Wide Target Achievement', icon: ICONS.Target },
+            { path: '/reports/forecast/subject-target-forecast', label: 'Subject Target Forecast', icon: ICONS.Target },
+            { path: '/reports/forecast/promotion-readiness', label: 'Promotion Readiness Report', icon: ICONS.Cap },
+            { path: '/reports/forecast/exam-readiness-index', label: 'Exam Readiness Index', icon: ICONS.Book },
+          ],
+        },
+        {
+          label: 'Comparisons',
+          key: 'reports-comparisons',
+          icon: ICONS.Compare,
+          subsubmenu: [
+            { path: '/reports/comparisons/class-to-class', label: 'Class-to-Class Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/teacher-to-teacher', label: 'Teacher-to-Teacher Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/term-to-term', label: 'Term-to-Term Comparison', icon: ICONS.Compare },
+            { path: '/reports/comparisons/internal-benchmark', label: 'Internal Benchmark Report', icon: ICONS.BarChart },
+          ],
+        },
+        {
+          label: 'Exports & Audit',
+          key: 'reports-exports',
+          icon: ICONS.Download,
+          subsubmenu: [
+            { path: '/reports/exports/inspection-reports', label: 'Inspection-Ready Reports', icon: ICONS.FileText },
+            { path: '/reports/exports/export-reports', label: 'Export Reports (PDF/Excel)', icon: ICONS.Download },
+            { path: '/reports/exports/audit-trail', label: 'Audit Trail Report', icon: ICONS.FileSearch },
+          ],
+        },
       ],
     },
     {
@@ -454,11 +631,44 @@ const Sidebar: React.FC<SidebarProps> = ({
       'headmaster-staff': ['/admin/users/teachers', '/attendance/teachers'],
       'headmaster-academics': ['/classrooms', '/subjects', '/teachers/timetable'],
       'headmaster-exams': ['/academic/exams', '/academic/results'],
-      'headmaster-reports': ['/academic/results'],
+      'headmaster-reports': [
+        '/reports/performance/best-worst-subjects',
+        '/reports/performance/best-worst-students',
+        '/reports/performance/most-improved-subjects',
+        '/reports/performance/most-improved-students',
+        '/reports/performance/teacher-targets',
+        '/reports/trends/subject-performance',
+        '/reports/trends/student-performance',
+        '/reports/trends/class-performance',
+        '/reports/risk/at-risk-students',
+        '/reports/risk/at-risk-subjects',
+        '/reports/risk/teacher-performance-risk',
+        '/reports/risk/exam-failure-forecast',
+        '/reports/teacher/teacher-vs-subject',
+        '/reports/teacher/teacher-consistency',
+        '/reports/teacher/syllabus-coverage',
+        '/reports/teacher/teacher-load',
+        '/reports/assessment/ca-vs-exam-variance',
+        '/reports/assessment/result-distribution',
+        '/reports/assessment/topical-performance',
+        '/reports/attendance/student-attendance-performance',
+        '/reports/attendance/teacher-attendance-results',
+        '/reports/attendance/class-attendance-impact',
+        '/reports/forecast/school-wide-targets',
+        '/reports/forecast/subject-target-forecast',
+        '/reports/forecast/promotion-readiness',
+        '/reports/forecast/exam-readiness-index',
+        '/reports/comparisons/class-to-class',
+        '/reports/comparisons/teacher-to-teacher',
+        '/reports/comparisons/term-to-term',
+        '/reports/comparisons/internal-benchmark',
+        '/reports/exports/inspection-reports',
+        '/reports/exports/export-reports',
+        '/reports/exports/audit-trail',
+      ],
       'headmaster-finance': ['/finance/fees', '/finance/payments'],
       'headmaster-communication': ['/notifications/send', '/notifications/flagged'],
       'headmaster-approvals': ['/head-master/approvals/exam-results', '/head-master/approvals/syllabus-submissions'],
-      'headmaster-settings': ['/users', '/admin/permissions', '/admin/setups/academic-year'],
       // Admin menus
       'admin-users': ['/users', '/students', '/admin/users/teachers', '/admin/users/head-masters', '/admin/users/parents'],
       'admin-academic': ['/academic/exams', '/academic/results'],
@@ -466,7 +676,41 @@ const Sidebar: React.FC<SidebarProps> = ({
       'admin-finance': ['/finance/fees', '/finance/payments'],
       'admin-communication': ['/notifications/send', '/notifications/flagged'],
       'admin-staff': ['/admin/users/teachers', '/admin/users/head-masters', '/attendance/teachers'],
-      'admin-reports': ['/academic/results', '/attendance/students', '/attendance/teachers'],
+      'admin-reports': [
+        '/reports/performance/best-worst-subjects',
+        '/reports/performance/best-worst-students',
+        '/reports/performance/most-improved-subjects',
+        '/reports/performance/most-improved-students',
+        '/reports/performance/teacher-targets',
+        '/reports/trends/subject-performance',
+        '/reports/trends/student-performance',
+        '/reports/trends/class-performance',
+        '/reports/risk/at-risk-students',
+        '/reports/risk/at-risk-subjects',
+        '/reports/risk/teacher-performance-risk',
+        '/reports/risk/exam-failure-forecast',
+        '/reports/teacher/teacher-vs-subject',
+        '/reports/teacher/teacher-consistency',
+        '/reports/teacher/syllabus-coverage',
+        '/reports/teacher/teacher-load',
+        '/reports/assessment/ca-vs-exam-variance',
+        '/reports/assessment/result-distribution',
+        '/reports/assessment/topical-performance',
+        '/reports/attendance/student-attendance-performance',
+        '/reports/attendance/teacher-attendance-results',
+        '/reports/attendance/class-attendance-impact',
+        '/reports/forecast/school-wide-targets',
+        '/reports/forecast/subject-target-forecast',
+        '/reports/forecast/promotion-readiness',
+        '/reports/forecast/exam-readiness-index',
+        '/reports/comparisons/class-to-class',
+        '/reports/comparisons/teacher-to-teacher',
+        '/reports/comparisons/term-to-term',
+        '/reports/comparisons/internal-benchmark',
+        '/reports/exports/inspection-reports',
+        '/reports/exports/export-reports',
+        '/reports/exports/audit-trail',
+      ],
       'admin-approvals': ['/head-master/approvals/exam-results', '/head-master/approvals/syllabus-submissions', '/teachers/syllabus'],
       'admin-setups': ['/admin/setups/academic-year', '/admin/setups/terms', '/classrooms', '/subjects', '/admin/setups/periods', '/admin/setups/grade-levels'],
       'admin-settings': ['/admin/permissions'],
@@ -620,7 +864,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       <aside 
         className={`fixed left-0 top-0 h-screen bg-white border-r border-slate-200 z-[70] flex flex-col transition-all duration-300 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${isCollapsed ? 'w-20' : 'w-64'}`}
+        }`}
+        style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
       >
         {/* Sidebar Brand Header */}
         <div className={`px-6 py-5 bg-slate-900 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} shrink-0 overflow-hidden`}>

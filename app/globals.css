@@ -166,3 +166,131 @@
 .theme-dark .border-gray-300 {
   border-color: #1f2937;
 }
+
+/* Dark mode input, textarea, and select styling */
+.theme-dark input[type="text"],
+.theme-dark input[type="email"],
+.theme-dark input[type="password"],
+.theme-dark input[type="number"],
+.theme-dark input[type="date"],
+.theme-dark input[type="time"],
+.theme-dark input[type="search"],
+.theme-dark textarea,
+.theme-dark select {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+.theme-dark input[type="text"]::placeholder,
+.theme-dark input[type="email"]::placeholder,
+.theme-dark input[type="password"]::placeholder,
+.theme-dark input[type="number"]::placeholder,
+.theme-dark input[type="date"]::placeholder,
+.theme-dark input[type="time"]::placeholder,
+.theme-dark input[type="search"]::placeholder,
+.theme-dark textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.theme-dark input[type="text"]:focus,
+.theme-dark input[type="email"]:focus,
+.theme-dark input[type="password"]:focus,
+.theme-dark input[type="number"]:focus,
+.theme-dark input[type="date"]:focus,
+.theme-dark input[type="time"]:focus,
+.theme-dark input[type="search"]:focus,
+.theme-dark textarea:focus,
+.theme-dark select:focus {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #3b82f6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.theme-dark input[type="text"]:disabled,
+.theme-dark input[type="email"]:disabled,
+.theme-dark input[type="password"]:disabled,
+.theme-dark input[type="number"]:disabled,
+.theme-dark input[type="date"]:disabled,
+.theme-dark input[type="time"]:disabled,
+.theme-dark input[type="search"]:disabled,
+.theme-dark textarea:disabled,
+.theme-dark select:disabled {
+  background-color: #0f172a !important;
+  color: #64748b !important;
+  border-color: #1e293b !important;
+  cursor: not-allowed;
+}
+
+/* Dark mode for select options */
+.theme-dark select option {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+/* Dark mode for input class */
+.theme-dark .input {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+.theme-dark .input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.theme-dark .input:focus {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.theme-dark .input:disabled {
+  background-color: #0f172a !important;
+  color: #64748b !important;
+  border-color: #1e293b !important;
+}
+
+/* Dark mode for labels */
+.theme-dark .label,
+.theme-dark label {
+  color: #cbd5e1 !important;
+}
+
+.theme-dark label.text-slate-700,
+.theme-dark label.text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+/* Dark mode for cards and containers */
+.theme-dark .card {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+}
+
+/* Dark mode for table elements */
+.theme-dark .table thead {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.theme-dark .table thead th {
+  background-color: #1e293b !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+.theme-dark .table tbody tr {
+  border-color: #1f2937 !important;
+}
+
+.theme-dark .table tbody tr:hover {
+  background-color: #1e293b !important;
+}
+
+.theme-dark .table tbody td {
+  color: #e2e8f0 !important;
+}

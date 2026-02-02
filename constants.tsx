@@ -43,7 +43,15 @@ import {
   Plus,
   Upload,
   Sun,
-  Moon
+  Moon,
+  Target,
+  Activity,
+  FileSearch,
+  Download,
+  GitCompare,
+  LineChart,
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 import { Student, Teacher, PaymentStatus, Exam, AttendanceRecord, FeeRecord } from './types';
 
@@ -116,7 +124,17 @@ export const ICONS = {
   UserCheck: (props?: any) => <UserCheck size={18} {...props} />,
   Briefcase: (props?: any) => <Briefcase size={18} {...props} />,
   Gender: (props?: any) => <Users2 size={18} {...props} />,
-  Award: (props?: any) => <Award size={18} {...props} />
+  Award: (props?: any) => <Award size={18} {...props} />,
+  
+  // Reports & Analytics
+  Target: (props?: any) => <Target size={18} {...props} />,
+  Activity: (props?: any) => <Activity size={18} {...props} />,
+  FileSearch: (props?: any) => <FileSearch size={18} {...props} />,
+  Download: (props?: any) => <Download size={18} {...props} />,
+  Compare: (props?: any) => <GitCompare size={18} {...props} />,
+  LineChart: (props?: any) => <LineChart size={18} {...props} />,
+  AlertTriangle: (props?: any) => <AlertTriangle size={18} {...props} />,
+  ShieldCheck: (props?: any) => <ShieldCheck size={18} {...props} />
 };
 
 // All data arrays emptied as requested
