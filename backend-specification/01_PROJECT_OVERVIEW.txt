@@ -1,0 +1,157 @@
+================================================================================
+ST. PETER'S SCHOOL MANAGEMENT SYSTEM - BACKEND SPECIFICATION
+================================================================================
+PROJECT OVERVIEW AND ARCHITECTURE
+================================================================================
+
+PROJECT NAME: St. Peter's School Management System Backend
+TECHNOLOGY STACK: C# (.NET 8.0 or later), PostgreSQL Database
+FRAMEWORK: ASP.NET Core Web API
+AUTHENTICATION: JWT Bearer Tokens
+API STYLE: RESTful API
+
+================================================================================
+SYSTEM ARCHITECTURE
+================================================================================
+
+1. LAYERED ARCHITECTURE:
+   - Presentation Layer: ASP.NET Core Web API Controllers
+   - Business Logic Layer: Services and Domain Logic
+   - Data Access Layer: Entity Framework Core / Dapper
+   - Database Layer: PostgreSQL
+
+2. KEY COMPONENTS:
+   - Authentication & Authorization Service
+   - User Management Service
+   - Academic Management Service (Exams, Results, Syllabus)
+   - Attendance Management Service
+   - Financial Management Service (Fees, Payments)
+   - Notification Service (Email/SMS)
+   - Reporting & Analytics Service
+   - Audit & Logging Service
+
+3. SECURITY REQUIREMENTS:
+   - JWT-based authentication
+   - Role-based access control (RBAC)
+   - Password hashing (BCrypt or similar)
+   - HTTPS enforcement
+   - CORS configuration for frontend
+   - Input validation and sanitization
+   - SQL injection prevention
+   - XSS protection
+
+================================================================================
+USER ROLES
+================================================================================
+
+1. ADMIN
+   - Full system access
+   - User management
+   - System configuration
+   - All reports and analytics
+
+2. HEAD_MASTER
+   - School-wide oversight
+   - Approvals (Exam Results, Syllabus)
+   - Reports and analytics
+   - Settings management
+
+3. TEACHER
+   - Class and subject management
+   - Attendance marking
+   - Exam creation and grading
+   - Syllabus management
+   - Lesson notes
+   - Student communication
+
+4. STUDENT
+   - View own academic records
+   - View attendance
+   - View fees
+   - View assignments and homework
+   - View exam schedules
+
+5. PARENT
+   - View children's academic records
+   - View children's attendance
+   - View fees and payments
+   - Communicate with teachers
+   - Receive notifications
+
+================================================================================
+API BASE URL STRUCTURE
+================================================================================
+
+Base URL: https://api.school.com/api/v1
+
+Endpoints organized by:
+- /api/v1/auth/* - Authentication endpoints
+- /api/v1/users/* - User management
+- /api/v1/students/* - Student management
+- /api/v1/teachers/* - Teacher management
+- /api/v1/parents/* - Parent management
+- /api/v1/classrooms/* - Classroom management
+- /api/v1/subjects/* - Subject management
+- /api/v1/academic/* - Academic operations (exams, results)
+- /api/v1/attendance/* - Attendance management
+- /api/v1/finance/* - Financial operations
+- /api/v1/notifications/* - Notification management
+- /api/v1/reports/* - Reports and analytics
+- /api/v1/settings/* - System settings
+- /api/v1/admin/* - Admin operations
+
+================================================================================
+DATABASE REQUIREMENTS
+================================================================================
+
+- PostgreSQL 12.0 or later
+- UTF-8 encoding
+- Timezone: UTC (store all dates in UTC, convert in API layer)
+- Connection pooling enabled
+- Backup strategy required
+- Migration support (EF Core Migrations or similar)
+
+================================================================================
+DEPENDENCIES AND PACKAGES
+================================================================================
+
+Required NuGet Packages:
+- Microsoft.EntityFrameworkCore (latest)
+- Npgsql.EntityFrameworkCore.PostgreSQL (latest)
+- Microsoft.AspNetCore.Authentication.JwtBearer (latest)
+- BCrypt.Net-Next (for password hashing)
+- AutoMapper (for DTO mapping)
+- FluentValidation (for input validation)
+- Serilog (for logging)
+- Swashbuckle.AspNetCore (for Swagger/OpenAPI)
+- MailKit (for email sending)
+- Twilio or similar (for SMS)
+
+================================================================================
+ENVIRONMENT CONFIGURATION
+================================================================================
+
+Required Environment Variables:
+- Database connection string
+- JWT secret key
+- JWT issuer and audience
+- Email SMTP settings
+- SMS provider credentials
+- Frontend URL (for CORS)
+- Logging level
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+See the following files for detailed specifications:
+- 02_DATABASE_SCHEMA.txt - Complete database schema
+- 03_AUTHENTICATION.txt - Auth implementation details
+- 04_API_ENDPOINTS.txt - All API endpoints
+- 05_DATA_MODELS.txt - C# models and DTOs
+- 06_BUSINESS_LOGIC.txt - Business rules
+- 07_IMPLEMENTATION_GUIDE.txt - Step-by-step guide
+- 08_NOTIFICATION_SYSTEM.txt - Email/SMS system
+- 09_REPORTS_ANALYTICS.txt - Reports requirements
+
+================================================================================

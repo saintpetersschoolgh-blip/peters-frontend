@@ -1,0 +1,339 @@
+================================================================================
+BUSINESS LOGIC AND RULES
+================================================================================
+
+================================================================================
+1. USER MANAGEMENT RULES
+================================================================================
+
+1.1 USER CREATION:
+   - Username must be unique
+   - Email must be unique
+   - Password must meet requirements (min 8 chars, uppercase, lowercase, number)
+   - When creating student, automatically create user account with STUDENT role
+   - When creating teacher, automatically create user account with TEACHER role
+   - When creating parent, automatically create user account with PARENT role
+   - Default status: ACTIVE
+   - Generate username from email if not provided
+
+1.2 USER DEACTIVATION:
+   - Cannot deactivate own account (for ADMIN/HEAD_MASTER)
+   - Deactivating user should:
+     - Set status to INACTIVE
+     - Invalidate all active sessions
+     - Prevent login
+   - Soft delete: Set is_active = false instead of hard delete
+
+1.3 PASSWORD POLICY:
+   - Minimum 8 characters
+   - Must contain at least one uppercase letter
+   - Must contain at least one lowercase letter
+   - Must contain at least one number
+   - Cannot be same as username or email
+   - Password reset token expires in 1 hour
+   - After password reset, invalidate all existing sessions
+
+================================================================================
+2. STUDENT MANAGEMENT RULES
+================================================================================
+
+2.1 STUDENT ADMISSION:
+   - Admission number must be unique
+   - Student must be assigned to a classroom
+   - Student must have a parent
+   - Age validation: Minimum 5 years old
+   - When student is created, increment classroom.current_students
+   - Check classroom capacity before assignment
+
+2.2 STUDENT PROMOTION:
+   - Can only promote to next grade level
+   - Update last_promotion date
+   - Move to new classroom
+   - Update classroom.current_students for both old and new classrooms
+   - Archive academic records from previous year
+
+2.3 STUDENT TRANSFER:
+   - Can transfer between classrooms in same grade level
+   - Update classroom.current_students
+   - Notify both class teachers
+   - Maintain academic history
+
+================================================================================
+3. ATTENDANCE RULES
+================================================================================
+
+3.1 STUDENT ATTENDANCE:
+   - One attendance record per student per day
+   - Cannot mark attendance for future dates
+   - Cannot mark attendance for dates more than 30 days in the past (configurable)
+   - Teacher can only mark attendance for assigned classrooms
+   - Attendance approval:
+     - Teacher marks: Requires approval (is_approved = false)
+     - Admin/Headmaster marks: Auto-approved (is_approved = true)
+   - Absent/Late notifications:
+     - 1 day absent/late: Notify parent only
+     - 3+ consecutive days: Notify parent + headmaster
+   - Calculate attendance percentage:
+     - (Present days / Total school days) * 100
+     - Exclude holidays and weekends
+
+3.2 TEACHER ATTENDANCE:
+   - One attendance record per teacher per day
+   - Only Admin/Headmaster can mark teacher attendance
+   - Auto-approved (no approval needed)
+   - Used for payroll and performance evaluation
+
+3.3 ATTENDANCE REPORTS:
+   - Daily attendance summary
+   - Monthly attendance report
+   - Attendance trends
+   - Absenteeism alerts
+
+================================================================================
+4. EXAM AND RESULTS RULES
+================================================================================
+
+4.1 EXAM CREATION:
+   - Exam date cannot be in the past
+   - Exam must be for an active subject
+   - Exam must be for an active classroom
+   - Teacher can only create exams for assigned subjects
+   - Default status: UPCOMING
+
+4.2 EXAM RESULTS:
+   - Score cannot exceed total_score
+   - Score cannot be negative
+   - Grade calculation:
+     - A: 90-100%
+     - B: 80-89%
+     - C: 70-79%
+     - D: 60-69%
+     - F: Below 60%
+   - One result per student per exam (unique constraint)
+   - Results are not published by default (is_published = false)
+   - Only teacher who created exam or admin can enter results
+   - Results approval workflow:
+     1. Teacher enters results (is_published = false)
+     2. Teacher publishes results (is_published = true)
+     3. Headmaster approves (triggers notifications to parents/students)
+   - Cannot modify results after approval (unless admin override)
+
+4.3 RESULT PUBLICATION:
+   - Publishing results triggers notifications:
+     - Email/SMS to parents
+     - Email/SMS to students
+     - Never send full marks via email (privacy)
+     - Include link to portal to view results
+   - Cannot unpublish results after 24 hours
+   - Cannot delete results after publication
+
+================================================================================
+5. SYLLABUS MANAGEMENT RULES
+================================================================================
+
+5.1 SYLLABUS CREATION:
+   - One syllabus per subject per academic year
+   - Teacher can create syllabus for assigned subjects only
+   - Topics must have unique order numbers
+   - Total topics must be > 0
+
+5.2 SYLLABUS PROGRESS:
+   - Completion percentage = (completed_topics / total_topics) * 100
+   - Update automatically when topics are marked as completed
+   - Track completion date for each topic
+
+5.3 SYLLABUS SUBMISSION:
+   - Minimum completion threshold: 80% (configurable)
+   - Cannot submit if below threshold
+   - Submission status: DRAFT -> SUBMITTED -> APPROVED/REJECTED
+   - Only Headmaster can approve/reject
+   - Rejection requires comment/feedback
+   - Approval triggers notification to teacher
+
+================================================================================
+6. FINANCIAL RULES
+================================================================================
+
+6.1 FEE STRUCTURE:
+   - One fee structure per classroom per term per academic year
+   - Total amount = sum of all fees
+   - Cannot modify fee structure after payments have been made
+   - Fee structure must be active before students can pay
+
+6.2 FEE PAYMENTS:
+   - Payment amount cannot exceed outstanding balance
+   - Payment date cannot be in the future
+   - Transaction ID must be unique (if provided)
+   - Calculate balance:
+     - Outstanding = Total Fee - Sum of Payments
+   - Payment status:
+     - PAID: Balance = 0
+     - PENDING: Balance > 0 and not overdue
+     - OVERDUE: Balance > 0 and due date passed
+   - Payment notifications:
+     - Send receipt via email
+     - Update parent/student portal
+
+6.3 FEE REMINDERS:
+   - Automatic reminders:
+     - 7 days before due date
+     - On due date
+     - 7 days after due date (overdue)
+   - Only send to parents with outstanding balance
+
+================================================================================
+7. NOTIFICATION RULES
+================================================================================
+
+7.1 NOTIFICATION RECIPIENTS:
+   - ALL: Send to all active users
+   - ROLE: Send to all users with specified roles
+   - INDIVIDUAL: Send to specific user IDs
+   - CLASS: Send to all students in specified classrooms (and their parents)
+   - Parent-to-Teacher: Use recipientTeacherId
+
+7.2 NOTIFICATION DELIVERY:
+   - Store notification in database first
+   - Queue for email/SMS delivery (async)
+   - Track delivery status
+   - Retry failed deliveries (max 3 attempts)
+   - Respect user preferences (email/SMS enabled per channel)
+
+7.3 NOTIFICATION CHANNELS:
+   - Each channel has email_enabled and sms_enabled flags
+   - Check channel settings before sending
+   - Respect recipient role filters
+   - Smart rules:
+     - Exam results: Never send full marks via email
+     - Attendance: Escalate after 3 consecutive days
+     - Fees: Send reminders based on due date
+
+7.4 NOTIFICATION READ STATUS:
+   - Track read status per recipient
+   - Mark as read when user views notification
+   - Bulk mark as read option
+   - Unread count for dashboard
+
+================================================================================
+8. CLASSROOM MANAGEMENT RULES
+================================================================================
+
+8.1 CLASSROOM CAPACITY:
+   - Cannot assign more students than capacity
+   - Check capacity before student assignment
+   - Update current_students count automatically
+   - Alert when capacity reaches 90%
+
+8.2 CLASSROOM ASSIGNMENTS:
+   - One class master per classroom
+   - Class master must be an active teacher
+   - Multiple teachers can teach in same classroom
+   - Subjects must be assigned to classroom before exams
+
+================================================================================
+9. TIMETABLE RULES
+================================================================================
+
+9.1 TIMETABLE VALIDATION:
+   - No overlapping periods for same classroom
+   - No overlapping periods for same teacher
+   - Period must be within school hours
+   - Start time must be before end time
+   - Duration must match period definition
+
+9.2 TIMETABLE CONFLICTS:
+   - Check teacher availability
+   - Check classroom availability
+   - Prevent double-booking
+   - Alert on conflicts
+
+================================================================================
+10. REPORTING RULES
+================================================================================
+
+10.1 DATA AGGREGATION:
+   - All reports use current academic year by default
+   - Support date range filtering
+   - Cache frequently accessed reports (5-15 minutes)
+   - Calculate metrics on-demand for real-time data
+
+10.2 REPORT PERMISSIONS:
+   - Admin and Headmaster: All reports
+   - Teachers: Reports for assigned classes only
+   - Students/Parents: Personal reports only
+
+10.3 REPORT EXPORT:
+   - Support JSON, CSV, PDF formats
+   - PDF reports include school letterhead
+   - Export includes metadata (generated date, user, filters)
+
+================================================================================
+11. AUDIT AND LOGGING RULES
+================================================================================
+
+11.1 AUDIT LOGGING:
+   - Log all create, update, delete operations
+   - Log authentication events (login, logout, failed login)
+   - Log sensitive operations (password reset, role changes)
+   - Store old and new values for updates
+   - Include user ID, IP address, timestamp
+
+11.2 DATA RETENTION:
+   - Keep audit logs for minimum 1 year
+   - Archive old logs (configurable)
+   - Soft delete: Keep deleted records for 30 days before permanent deletion
+
+================================================================================
+12. VALIDATION RULES
+================================================================================
+
+12.1 INPUT VALIDATION:
+   - Validate all inputs on server side
+   - Sanitize user inputs
+   - Prevent SQL injection
+   - Prevent XSS attacks
+   - Validate file uploads (size, type)
+
+12.2 BUSINESS VALIDATION:
+   - Check entity existence before operations
+   - Validate relationships (e.g., student belongs to classroom)
+   - Check permissions before operations
+   - Validate state transitions (e.g., exam status)
+
+================================================================================
+13. ERROR HANDLING
+================================================================================
+
+13.1 ERROR RESPONSES:
+   - Return appropriate HTTP status codes
+   - Include error message
+   - Include error code for client handling
+   - Log errors server-side
+   - Don't expose sensitive information
+
+13.2 EXCEPTION HANDLING:
+   - Catch and handle all exceptions
+   - Log exceptions with context
+   - Return user-friendly error messages
+   - Handle database constraint violations
+   - Handle concurrent update conflicts
+
+================================================================================
+14. PERFORMANCE OPTIMIZATION
+================================================================================
+
+14.1 DATABASE OPTIMIZATION:
+   - Use indexes on frequently queried columns
+   - Use pagination for large datasets
+   - Use eager loading for related entities
+   - Use database views for complex queries
+   - Optimize slow queries
+
+14.2 CACHING:
+   - Cache user permissions
+   - Cache frequently accessed data
+   - Cache report results
+   - Invalidate cache on updates
+   - Use Redis or in-memory cache
+
+================================================================================

@@ -1,0 +1,317 @@
+================================================================================
+NOTIFICATION SYSTEM - EMAIL & SMS
+================================================================================
+
+================================================================================
+1. NOTIFICATION CHANNELS CONFIGURATION
+================================================================================
+
+1.1 CHANNEL STRUCTURE:
+   Each notification channel has:
+   - channel_id: Unique identifier (e.g., "exam_results_published")
+   - name: Display name
+   - description: What triggers this notification
+   - category: academic, attendance, financial, system, user, communication, student
+   - recipient_roles: Array of roles that receive this notification
+   - email_enabled: Boolean flag
+   - sms_enabled: Boolean flag
+
+1.2 DEFAULT CHANNELS (Seed Data):
+
+ACADEMIC CHANNELS:
+- exam_schedule_published: Exam schedules published/updated
+  Recipients: parent, teacher, student
+- exam_results_published: Exam results published
+  Recipients: parent, student
+  Note: Never send full marks via email
+- exam_results_approved: Results approved by headmaster
+  Recipients: teacher
+- ca_scores_posted: Continuous assessment updated
+  Recipients: parent
+- grades_posted: Grades posted for assignments
+  Recipients: parent, student
+- syllabus_submitted: Teacher submits syllabus
+  Recipients: headmaster
+- syllabus_approved: Syllabus approved
+  Recipients: teacher
+- syllabus_rejected: Syllabus rejected
+  Recipients: teacher
+- classwork_assigned: Classwork assigned
+  Recipients: parent, student
+- homework_assigned: Homework assigned
+  Recipients: parent, student
+- lesson_notes_submitted: Lesson notes submitted
+  Recipients: headmaster
+- report_card_generated: Report card generated
+  Recipients: parent, student
+- promotion_status: Student promotion determined
+  Recipients: parent, teacher, headmaster
+- performance_flag_raised: Performance flag raised
+  Recipients: parent, teacher, headmaster
+- at_risk_student_alert: Student identified as at-risk
+  Recipients: parent, teacher, headmaster
+
+ATTENDANCE CHANNELS:
+- student_absent: Student marked absent
+  Recipients: parent (1 day), parent + headmaster (3+ consecutive days)
+- student_late: Student marked late
+  Recipients: parent (1 day), parent + headmaster (3+ consecutive days)
+- attendance_marked: Daily attendance marked
+  Recipients: teacher, headmaster
+- attendance_approval_required: Attendance needs approval
+  Recipients: headmaster
+- attendance_summary: Weekly/monthly attendance summary
+  Recipients: parent
+
+FINANCIAL CHANNELS:
+- fee_structure_created: Fee structure created
+  Recipients: parent
+- fee_payment_received: Payment received
+  Recipients: parent, student
+- fee_payment_reminder: Payment reminder
+  Recipients: parent
+- fee_overdue: Fee overdue
+  Recipients: parent, headmaster
+- fee_receipt: Payment receipt
+  Recipients: parent
+
+SYSTEM CHANNELS:
+- user_account_created: User account created
+  Recipients: user (themselves)
+- password_reset_requested: Password reset requested
+  Recipients: user
+- password_reset_successful: Password reset successful
+  Recipients: user
+- account_activated: Account activated
+  Recipients: user
+- account_deactivated: Account deactivated
+  Recipients: user
+
+COMMUNICATION CHANNELS:
+- message_received: New message received
+  Recipients: recipient
+- notification_sent: General notification sent
+  Recipients: specified recipients
+
+STUDENT-SPECIFIC CHANNELS:
+- student_admitted: Student admitted to school
+  Recipients: parent, student, teacher (class teacher)
+- student_promoted: Student promoted to next class
+  Recipients: parent, student, teacher
+- student_transferred: Student transferred to another class
+  Recipients: parent, teacher (both old and new)
+
+================================================================================
+2. EMAIL CONFIGURATION
+================================================================================
+
+2.1 EMAIL SETTINGS TABLE:
+   - enabled: Boolean
+   - smtp_host: String (e.g., smtp.gmail.com)
+   - smtp_port: Integer (587 for TLS, 465 for SSL)
+   - smtp_username: String
+   - smtp_password: String (encrypted)
+   - from_email: String
+   - from_name: String
+   - use_tls: Boolean
+   - use_ssl: Boolean
+
+2.2 EMAIL SERVICE IMPLEMENTATION:
+   - Use MailKit library
+   - Async email sending
+   - Queue emails for background processing
+   - Retry failed emails (max 3 attempts)
+   - Track delivery status
+
+2.3 EMAIL TEMPLATES:
+   Create HTML email templates for:
+   - Exam results notification
+   - Attendance alerts
+   - Fee reminders
+   - Payment receipts
+   - Password reset
+   - General notifications
+
+2.4 EMAIL CONTENT RULES:
+   - Never send full exam marks via email (privacy)
+   - Include link to portal for detailed information
+   - Include school branding/letterhead
+   - Personalize with recipient name
+   - Clear call-to-action buttons
+
+================================================================================
+3. SMS CONFIGURATION
+================================================================================
+
+3.1 SMS SETTINGS TABLE:
+   - enabled: Boolean
+   - provider: String (twilio, africas-talking, nexmo, custom)
+   - api_key: String (encrypted)
+   - api_secret: String (encrypted)
+   - sender_id: String
+   - endpoint: String (for custom provider)
+
+3.2 SMS SERVICE IMPLEMENTATION:
+   - Support multiple providers
+   - Async SMS sending
+   - Queue SMS for background processing
+   - Retry failed SMS (max 3 attempts)
+   - Track delivery status
+   - Handle provider-specific errors
+
+3.3 SMS CONTENT RULES:
+   - Keep messages concise (160 characters or less)
+   - Include essential information only
+   - Include link to portal if needed
+   - Use URL shortener for links
+   - Personalize with recipient name
+
+================================================================================
+4. NOTIFICATION SERVICE ARCHITECTURE
+================================================================================
+
+4.1 NOTIFICATION SERVICE INTERFACE:
+   public interface INotificationService
+   {
+       Task SendNotificationAsync(CreateNotificationRequest request);
+       Task SendEmailAsync(string to, string subject, string body);
+       Task SendSMSAsync(string to, string message);
+       Task<List<NotificationDto>> GetUserNotificationsAsync(Guid userId);
+       Task MarkAsReadAsync(Guid notificationId, Guid userId);
+   }
+
+4.2 NOTIFICATION PROCESSING FLOW:
+   1. Create notification record in database
+   2. Resolve recipients based on recipient_type
+   3. For each recipient:
+      a. Check channel configuration (email_enabled, sms_enabled)
+      b. Check user preferences (if implemented)
+      c. Queue email if enabled
+      d. Queue SMS if enabled
+   4. Process queue asynchronously
+   5. Update delivery status
+
+4.3 RECIPIENT RESOLUTION:
+   - ALL: All active users
+   - ROLE: Users with specified roles
+   - INDIVIDUAL: Specific user IDs
+   - CLASS: All students in classrooms + their parents
+   - Parent-to-Teacher: Specific teacher ID
+
+================================================================================
+5. SMART NOTIFICATION RULES
+================================================================================
+
+5.1 EXAM RESULTS:
+   - Trigger: When exam results are published
+   - Email: Send notification with link (no marks)
+   - SMS: Send brief notification with link
+   - Recipients: Parents and students
+   - Template: "Exam results for [Subject] are now available. View in portal: [link]"
+
+5.2 ATTENDANCE ALERTS:
+   - 1 day absent/late: Notify parent only via SMS
+   - 3+ consecutive days: Notify parent + headmaster via Email + SMS
+   - Weekly summary: Email to parents on Friday
+   - Template: "[Student] was [absent/late] on [date]. View details: [link]"
+
+5.3 FEE REMINDERS:
+   - 7 days before due: Email reminder
+   - On due date: SMS reminder
+   - 7 days after due: Email + SMS (overdue)
+   - Template: "Fee payment of [amount] for [term] is due on [date]. Pay now: [link]"
+
+5.4 PERFORMANCE FLAGS:
+   - Trigger: When flag is raised
+   - Email: Detailed information
+   - SMS: Brief alert
+   - Recipients: Parent, Teacher, Headmaster
+   - Template: "Performance alert for [Student]: [description]. View details: [link]"
+
+================================================================================
+6. BACKGROUND PROCESSING
+================================================================================
+
+6.1 QUEUE IMPLEMENTATION:
+   - Use background job queue (Hangfire, Quartz, or similar)
+   - Process emails/SMS asynchronously
+   - Retry failed jobs
+   - Log all attempts
+
+6.2 SCHEDULED JOBS:
+   - Daily attendance summary (end of day)
+   - Weekly fee reminders (Monday)
+   - Monthly reports (first of month)
+   - Cleanup old notifications (weekly)
+
+================================================================================
+7. NOTIFICATION STORAGE
+================================================================================
+
+7.1 NOTIFICATIONS TABLE:
+   - Store all notifications
+   - Track read status per recipient
+   - Support filtering and search
+   - Archive old notifications
+
+7.2 NOTIFICATION_RECIPIENTS TABLE:
+   - Track individual recipient status
+   - Mark as read/unread
+   - Track read timestamp
+
+================================================================================
+8. TESTING NOTIFICATIONS
+================================================================================
+
+8.1 TEST EMAIL ENDPOINT:
+   POST /api/v1/settings/email/test
+   Request: { "to": "test@example.com" }
+   Response: { "success": true, "message": "Test email sent" }
+
+8.2 TEST SMS ENDPOINT:
+   POST /api/v1/settings/sms/test
+   Request: { "to": "+1234567890" }
+   Response: { "success": true, "message": "Test SMS sent" }
+
+================================================================================
+9. IMPLEMENTATION STEPS
+================================================================================
+
+Step 1: Create NotificationChannel entity and seed data
+Step 2: Create EmailConfig and SMSConfig entities
+Step 3: Implement EmailService with MailKit
+Step 4: Implement SMSService with provider SDK
+Step 5: Create NotificationService
+Step 6: Implement recipient resolution logic
+Step 7: Set up background job processing
+Step 8: Create notification templates
+Step 9: Implement smart rules
+Step 10: Add test endpoints
+Step 11: Create notification controller
+Step 12: Test all channels
+
+================================================================================
+10. SECURITY CONSIDERATIONS
+================================================================================
+
+- Encrypt sensitive credentials (SMTP password, SMS API keys)
+- Use environment variables for production
+- Rate limit notification sending
+- Validate phone numbers and email addresses
+- Sanitize notification content
+- Log all notification attempts
+- Monitor for abuse
+
+================================================================================
+11. MONITORING & METRICS
+================================================================================
+
+Track:
+- Emails sent (success/failure)
+- SMS sent (success/failure)
+- Delivery rates
+- Bounce rates
+- Read rates
+- Response times
+
+================================================================================

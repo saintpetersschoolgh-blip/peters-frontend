@@ -1,0 +1,1369 @@
+================================================================================
+REQUESTS AND RESPONSES - COMPLETE REFERENCE
+================================================================================
+
+This file documents detailed request and response formats for all API endpoints.
+Use this as the definitive reference when implementing controllers and testing.
+
+Base URL: /api/v1
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {access_token} (required for protected endpoints)
+
+================================================================================
+1. STANDARD RESPONSE FORMATS
+================================================================================
+
+1.1 SUCCESS RESPONSE (Single Entity):
+{
+  "success": true,
+  "data": { /* entity object */ },
+  "message": "Optional success message"
+}
+
+1.2 SUCCESS RESPONSE (List with Pagination):
+{
+  "success": true,
+  "data": [ /* array of entities */ ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 156,
+    "totalPages": 8,
+    "hasNext": true,
+    "hasPrevious": false
+  }
+}
+
+1.3 SUCCESS RESPONSE (Simple Message):
+{
+  "success": true,
+  "message": "Operation completed successfully"
+}
+
+1.4 ERROR RESPONSE (400 Bad Request - Validation):
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Email is required"
+    },
+    {
+      "field": "dateOfBirth",
+      "message": "Date of birth must be in the past"
+    }
+  ]
+}
+
+1.5 ERROR RESPONSE (401 Unauthorized):
+{
+  "success": false,
+  "message": "Unauthorized",
+  "errorCode": "UNAUTHORIZED"
+}
+
+1.6 ERROR RESPONSE (403 Forbidden):
+{
+  "success": false,
+  "message": "You do not have permission to perform this action",
+  "errorCode": "FORBIDDEN"
+}
+
+1.7 ERROR RESPONSE (404 Not Found):
+{
+  "success": false,
+  "message": "Resource not found",
+  "errorCode": "NOT_FOUND",
+  "details": "Student with id xyz was not found"
+}
+
+1.8 ERROR RESPONSE (500 Internal Server Error):
+{
+  "success": false,
+  "message": "An unexpected error occurred",
+  "errorCode": "INTERNAL_ERROR",
+  "traceId": "optional-correlation-id-for-logging"
+}
+
+================================================================================
+2. AUTHENTICATION REQUESTS & RESPONSES
+================================================================================
+
+2.1 POST /auth/login
+
+REQUEST:
+{
+  "username": "admin001",
+  "password": "SecurePass123!"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+    "expiresIn": 1800,
+    "user": {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "username": "admin001",
+      "email": "admin@school.edu",
+      "role": "ADMIN",
+      "firstName": "John",
+      "lastName": "Admin",
+      "status": "ACTIVE",
+      "profileImage": null
+    }
+  }
+}
+
+2.2 POST /auth/refresh
+
+REQUEST (Header only):
+Authorization: Bearer {refreshToken}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 1800
+  }
+}
+
+2.3 POST /auth/forgot-password
+
+REQUEST:
+{
+  "email": "parent@example.com"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "If an account exists with this email, a password reset link has been sent"
+}
+
+2.4 POST /auth/reset-password
+
+REQUEST:
+{
+  "token": "reset_token_from_email_link",
+  "newPassword": "NewSecurePass456!"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+
+2.5 GET /auth/me
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "username": "admin001",
+      "email": "admin@school.edu",
+      "role": "ADMIN",
+      "firstName": "John",
+      "lastName": "Admin",
+      "status": "ACTIVE",
+      "profileImage": null,
+      "lastLoginAt": "2026-02-07T09:30:00Z"
+    }
+  }
+}
+
+================================================================================
+3. USERS - REQUESTS & RESPONSES
+================================================================================
+
+3.1 GET /users
+
+QUERY PARAMETERS:
+?role=TEACHER&status=ACTIVE&search=john&page=1&pageSize=20&sortBy=createdAt&sortOrder=desc
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "username": "teacher001",
+      "email": "teacher@school.edu",
+      "role": "TEACHER",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "status": "ACTIVE",
+      "lastLoginAt": "2026-02-06T14:00:00Z",
+      "createdAt": "2025-09-01T08:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 45,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrevious": false
+  }
+}
+
+3.2 POST /users
+
+REQUEST:
+{
+  "username": "newteacher",
+  "email": "new.teacher@school.edu",
+  "password": "TempPassword123!",
+  "role": "TEACHER",
+  "firstName": "Alice",
+  "lastName": "Smith"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "username": "newteacher",
+    "email": "new.teacher@school.edu",
+    "role": "TEACHER",
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "status": "ACTIVE",
+    "createdAt": "2026-02-07T10:00:00Z"
+  },
+  "message": "User created successfully"
+}
+
+3.3 PUT /users/{id}
+
+REQUEST:
+{
+  "email": "updated@school.edu",
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "role": "TEACHER"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": { /* updated user object */ },
+  "message": "User updated successfully"
+}
+
+3.4 PATCH /users/{id}/status
+
+REQUEST:
+{
+  "status": "INACTIVE"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "User status updated successfully"
+}
+
+================================================================================
+4. STUDENTS - REQUESTS & RESPONSES
+================================================================================
+
+4.1 GET /students
+
+QUERY PARAMETERS:
+?classroomId=uuid&status=ACTIVE&search=john&page=1&pageSize=20
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "admissionNumber": "STU-2025-001",
+      "firstName": "John",
+      "lastName": "Smith",
+      "dateOfBirth": "2015-03-15",
+      "gender": "MALE",
+      "classroom": {
+        "id": "uuid",
+        "name": "Primary 5A"
+      },
+      "parent": {
+        "id": "uuid",
+        "firstName": "Robert",
+        "lastName": "Smith",
+        "email": "robert@example.com"
+      },
+      "isActive": true,
+      "enrolledAt": "2025-09-01"
+    }
+  ],
+  "pagination": { /* standard pagination */ }
+}
+
+4.2 POST /students
+
+REQUEST:
+{
+  "admissionNumber": "STU-2025-050",
+  "firstName": "Emily",
+  "lastName": "Johnson",
+  "dateOfBirth": "2016-07-22",
+  "gender": "FEMALE",
+  "address": "123 Main Street, City",
+  "phoneNumber": "+233501234567",
+  "emergencyContact": "+233509876543",
+  "email": "emily.parent@example.com",
+  "parentId": "parent-uuid-here",
+  "classroomId": "classroom-uuid-here"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "admissionNumber": "STU-2025-050",
+    "firstName": "Emily",
+    "lastName": "Johnson",
+    "dateOfBirth": "2016-07-22",
+    "gender": "FEMALE",
+    "classroomId": "uuid",
+    "parentId": "uuid",
+    "isActive": true,
+    "enrolledAt": "2026-02-07",
+    "createdAt": "2026-02-07T10:00:00Z"
+  },
+  "message": "Student admitted successfully"
+}
+
+4.3 GET /students/{id}/profile
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "admissionNumber": "STU-2025-001",
+    "firstName": "John",
+    "lastName": "Smith",
+    "dateOfBirth": "2015-03-15",
+    "gender": "MALE",
+    "address": "123 Main Street",
+    "phoneNumber": "+233501234567",
+    "emergencyContact": "+233509876543",
+    "email": "john.parent@example.com",
+    "classroom": {
+      "id": "uuid",
+      "name": "Primary 5A",
+      "code": "P5A"
+    },
+    "parent": {
+      "id": "uuid",
+      "firstName": "Robert",
+      "lastName": "Smith",
+      "email": "robert@example.com",
+      "phoneNumber": "+233501234567",
+      "relationship": "FATHER"
+    },
+    "enrolledAt": "2025-09-01",
+    "profileImage": null
+  }
+}
+
+================================================================================
+5. TEACHERS - REQUESTS & RESPONSES
+================================================================================
+
+5.1 POST /teachers
+
+REQUEST:
+{
+  "staffNumber": "TCH-2025-015",
+  "firstName": "Mary",
+  "lastName": "Williams",
+  "dateOfBirth": "1990-05-10",
+  "gender": "FEMALE",
+  "phoneNumber": "+233501234567",
+  "address": "456 Teacher Lane",
+  "email": "mary.williams@school.edu",
+  "qualifications": ["B.Ed Mathematics", "M.Sc Education"],
+  "subjectIds": ["subject-uuid-1", "subject-uuid-2"],
+  "classroomIds": ["classroom-uuid-1"]
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "staffNumber": "TCH-2025-015",
+    "firstName": "Mary",
+    "lastName": "Williams",
+    "email": "mary.williams@school.edu",
+    "subjects": [
+      { "id": "uuid", "name": "Mathematics", "code": "MTH" }
+    ],
+    "classrooms": [
+      { "id": "uuid", "name": "Primary 5A" }
+    ],
+    "isActive": true,
+    "joinedAt": "2026-02-07"
+  },
+  "message": "Teacher created successfully"
+}
+
+================================================================================
+6. PARENTS - REQUESTS & RESPONSES
+================================================================================
+
+6.1 POST /parents
+
+REQUEST:
+{
+  "firstName": "Robert",
+  "lastName": "Smith",
+  "email": "robert.smith@example.com",
+  "phoneNumber": "+233501234567",
+  "address": "123 Main Street, City",
+  "occupation": "Engineer",
+  "relationship": "FATHER"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "firstName": "Robert",
+    "lastName": "Smith",
+    "email": "robert.smith@example.com",
+    "phoneNumber": "+233501234567",
+    "relationship": "FATHER",
+    "isActive": true,
+    "createdAt": "2026-02-07T10:00:00Z"
+  },
+  "message": "Parent created successfully"
+}
+
+6.2 GET /parents/{id}/children
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "admissionNumber": "STU-2025-001",
+      "firstName": "John",
+      "lastName": "Smith",
+      "classroom": { "name": "Primary 5A" },
+      "isActive": true
+    }
+  ]
+}
+
+================================================================================
+7. CLASSROOMS - REQUESTS & RESPONSES
+================================================================================
+
+7.1 POST /classrooms
+
+REQUEST:
+{
+  "name": "Primary 5A",
+  "code": "P5A",
+  "description": "Primary 5 Section A",
+  "academicYear": "2025-2026",
+  "classMasterId": "teacher-uuid",
+  "capacity": 40,
+  "subjectIds": ["uuid1", "uuid2", "uuid3"]
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Primary 5A",
+    "code": "P5A",
+    "academicYear": "2025-2026",
+    "currentStudents": 0,
+    "capacity": 40,
+    "classMaster": {
+      "id": "uuid",
+      "firstName": "Mary",
+      "lastName": "Williams"
+    },
+    "isActive": true
+  },
+  "message": "Classroom created successfully"
+}
+
+================================================================================
+8. SUBJECTS - REQUESTS & RESPONSES
+================================================================================
+
+8.1 POST /subjects
+
+REQUEST:
+{
+  "code": "MTH",
+  "name": "Mathematics",
+  "description": "Core mathematics for primary level",
+  "classroomId": "uuid",
+  "teacherIds": ["teacher-uuid"]
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "code": "MTH",
+    "name": "Mathematics",
+    "description": "Core mathematics for primary level",
+    "totalTopics": 0,
+    "completedTopics": 0,
+    "isActive": true
+  },
+  "message": "Subject created successfully"
+}
+
+================================================================================
+9. ATTENDANCE - REQUESTS & RESPONSES
+================================================================================
+
+9.1 POST /attendance/students
+
+REQUEST:
+{
+  "studentId": "uuid",
+  "classroomId": "uuid",
+  "date": "2026-02-07",
+  "status": "PRESENT",
+  "remarks": null
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "studentId": "uuid",
+    "studentName": "John Smith",
+    "classroomId": "uuid",
+    "date": "2026-02-07",
+    "status": "PRESENT",
+    "remarks": null
+  },
+  "message": "Attendance recorded"
+}
+
+9.2 POST /attendance/students/bulk
+
+REQUEST:
+{
+  "classroomId": "uuid",
+  "date": "2026-02-07",
+  "attendances": [
+    { "studentId": "uuid1", "status": "PRESENT", "remarks": null },
+    { "studentId": "uuid2", "status": "ABSENT", "remarks": "Sick" },
+    { "studentId": "uuid3", "status": "LATE", "remarks": "Traffic" }
+  ]
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "recorded": 3,
+    "date": "2026-02-07",
+    "classroomId": "uuid"
+  },
+  "message": "Bulk attendance recorded successfully"
+}
+
+9.3 GET /attendance/students/student/{studentId}
+
+QUERY PARAMETERS:
+?startDate=2026-01-01&endDate=2026-02-07
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "date": "2026-02-07",
+      "status": "PRESENT",
+      "remarks": null,
+      "classroomName": "Primary 5A"
+    }
+  ],
+  "summary": {
+    "totalDays": 25,
+    "present": 23,
+    "absent": 1,
+    "late": 1,
+    "attendanceRate": 92.0
+  }
+}
+
+================================================================================
+10. EXAMS - REQUESTS & RESPONSES
+================================================================================
+
+10.1 POST /academic/exams
+
+REQUEST:
+{
+  "title": "Mathematics Mid-Term Exam",
+  "subjectId": "uuid",
+  "classroomId": "uuid",
+  "term": "Term 1",
+  "date": "2026-03-15",
+  "startTime": "09:00",
+  "duration": 90,
+  "totalScore": 100,
+  "venue": "Hall A",
+  "instructions": "No calculators allowed"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Mathematics Mid-Term Exam",
+    "subject": { "name": "Mathematics", "code": "MTH" },
+    "classroom": { "name": "Primary 5A" },
+    "term": "Term 1",
+    "date": "2026-03-15",
+    "startTime": "09:00",
+    "duration": 90,
+    "totalScore": 100,
+    "venue": "Hall A",
+    "status": "SCHEDULED"
+  },
+  "message": "Exam created successfully"
+}
+
+================================================================================
+11. EXAM RESULTS - REQUESTS & RESPONSES
+================================================================================
+
+11.1 POST /academic/results
+
+REQUEST:
+{
+  "examId": "uuid",
+  "studentId": "uuid",
+  "score": 75.5,
+  "grade": "B",
+  "remarks": "Good performance"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "examId": "uuid",
+    "studentId": "uuid",
+    "studentName": "John Smith",
+    "score": 75.5,
+    "grade": "B",
+    "remarks": "Good performance",
+    "isPublished": false,
+    "isApproved": false
+  },
+  "message": "Result recorded"
+}
+
+11.2 POST /academic/results/bulk
+
+REQUEST:
+{
+  "examId": "uuid",
+  "results": [
+    { "studentId": "uuid1", "score": 85, "grade": "A", "remarks": null },
+    { "studentId": "uuid2", "score": 72, "grade": "B", "remarks": null },
+    { "studentId": "uuid3", "score": 55, "grade": "C", "remarks": "Needs improvement" }
+  ]
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "examId": "uuid",
+    "recorded": 3,
+    "results": [ /* array of result objects */ ]
+  },
+  "message": "Bulk results recorded successfully"
+}
+
+11.3 PATCH /academic/results/{id}/publish
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Result published successfully"
+}
+
+11.4 POST /academic/results/{id}/approve (HEAD_MASTER)
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Result approved successfully"
+}
+
+================================================================================
+12. SYLLABUS - REQUESTS & RESPONSES
+================================================================================
+
+12.1 POST /syllabus
+
+REQUEST:
+{
+  "subjectId": "uuid",
+  "topics": [
+    { "title": "Introduction to Fractions", "description": "Basic fraction concepts", "orderNumber": 1 },
+    { "title": "Adding Fractions", "description": null, "orderNumber": 2 },
+    { "title": "Subtracting Fractions", "description": null, "orderNumber": 3 }
+  ]
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "subjectId": "uuid",
+    "subjectName": "Mathematics",
+    "topics": [
+      { "id": "uuid", "title": "Introduction to Fractions", "orderNumber": 1, "isCompleted": false },
+      { "id": "uuid", "title": "Adding Fractions", "orderNumber": 2, "isCompleted": false },
+      { "id": "uuid", "title": "Subtracting Fractions", "orderNumber": 3, "isCompleted": false }
+    ],
+    "status": "DRAFT"
+  },
+  "message": "Syllabus created successfully"
+}
+
+12.2 POST /syllabus/{id}/submit
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Syllabus submitted for approval"
+}
+
+12.3 POST /syllabus/{id}/approve
+
+REQUEST (optional):
+{
+  "comments": "Approved after review"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Syllabus approved successfully"
+}
+
+12.4 POST /syllabus/{id}/reject
+
+REQUEST:
+{
+  "reason": "Topics 2 and 3 need more detail"
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Syllabus rejected"
+}
+
+================================================================================
+13. TIMETABLE - REQUESTS & RESPONSES
+================================================================================
+
+13.1 POST /timetable
+
+REQUEST:
+{
+  "subjectId": "uuid",
+  "teacherId": "uuid",
+  "classroomId": "uuid",
+  "dayOfWeek": 1,
+  "startTime": "08:00",
+  "endTime": "08:45",
+  "period": 1
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "subject": { "name": "Mathematics", "code": "MTH" },
+    "teacher": { "firstName": "Mary", "lastName": "Williams" },
+    "classroom": { "name": "Primary 5A" },
+    "dayOfWeek": 1,
+    "dayName": "Monday",
+    "startTime": "08:00",
+    "endTime": "08:45",
+    "period": 1
+  },
+  "message": "Timetable entry created"
+}
+
+13.2 GET /timetable/classroom/{classroomId}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "classroom": { "id": "uuid", "name": "Primary 5A" },
+    "entries": [
+      {
+        "id": "uuid",
+        "dayOfWeek": 1,
+        "period": 1,
+        "startTime": "08:00",
+        "endTime": "08:45",
+        "subject": "Mathematics",
+        "teacher": "Mary Williams"
+      }
+    ]
+  }
+}
+
+================================================================================
+14. LESSON NOTES - REQUESTS & RESPONSES
+================================================================================
+
+14.1 POST /lesson-notes
+
+REQUEST:
+{
+  "timetableId": "uuid",
+  "topicsCovered": "Introduction to Fractions - halves and quarters",
+  "objectives": "Students will be able to identify halves and quarters",
+  "materials": "Fraction circles, worksheets",
+  "activities": "Group work, individual practice",
+  "assessment": "Oral quiz, worksheet completion",
+  "homework": "Complete exercises 1-5 on page 42",
+  "remarks": "Most students grasped the concept"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "timetableId": "uuid",
+    "date": "2026-02-07",
+    "topicsCovered": "Introduction to Fractions - halves and quarters",
+    "status": "PENDING_APPROVAL"
+  },
+  "message": "Lesson note submitted"
+}
+
+================================================================================
+15. FINANCE - FEES & PAYMENTS
+================================================================================
+
+15.1 POST /finance/fees
+
+REQUEST:
+{
+  "classroomId": "uuid",
+  "term": "Term 1",
+  "academicYear": "2025-2026",
+  "tuitionFee": 500.00,
+  "examFee": 50.00,
+  "labFee": 30.00,
+  "libraryFee": 20.00,
+  "transportFee": 100.00,
+  "otherFees": {
+    "Sports": 25,
+    "ICT": 15
+  }
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "classroom": { "name": "Primary 5A" },
+    "term": "Term 1",
+    "academicYear": "2025-2026",
+    "totalAmount": 740.00,
+    "breakdown": {
+      "tuitionFee": 500,
+      "examFee": 50,
+      "labFee": 30,
+      "libraryFee": 20,
+      "transportFee": 100,
+      "otherFees": 40
+    }
+  },
+  "message": "Fee structure created"
+}
+
+15.2 POST /finance/payments
+
+REQUEST:
+{
+  "studentId": "uuid",
+  "feeStructureId": "uuid",
+  "amount": 740.00,
+  "paymentDate": "2026-02-07",
+  "paymentMethod": "BANK_TRANSFER",
+  "transactionId": "TXN-20260207-001",
+  "remarks": "Term 1 fees"
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "studentId": "uuid",
+    "studentName": "John Smith",
+    "amount": 740.00,
+    "paymentDate": "2026-02-07",
+    "paymentMethod": "BANK_TRANSFER",
+    "transactionId": "TXN-20260207-001",
+    "receiptNumber": "RCP-2026-00123"
+  },
+  "message": "Payment recorded successfully"
+}
+
+15.3 GET /finance/payments/student/{studentId}
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "student": { "id": "uuid", "name": "John Smith" },
+    "payments": [
+      {
+        "id": "uuid",
+        "amount": 740,
+        "paymentDate": "2026-02-07",
+        "paymentMethod": "BANK_TRANSFER",
+        "receiptNumber": "RCP-2026-00123"
+      }
+    ],
+    "summary": {
+      "totalFees": 740,
+      "totalPaid": 740,
+      "outstanding": 0,
+      "overdue": 0
+    }
+  }
+}
+
+================================================================================
+16. NOTIFICATIONS - REQUESTS & RESPONSES
+================================================================================
+
+16.1 POST /notifications
+
+REQUEST (to all teachers):
+{
+  "title": "Staff Meeting Reminder",
+  "message": "Reminder: Staff meeting tomorrow at 3 PM in the main hall.",
+  "type": "GENERAL",
+  "recipientType": "ROLE",
+  "recipientRoles": ["TEACHER"],
+  "recipientIds": null,
+  "classroomIds": null
+}
+
+REQUEST (to specific parent - e.g. from teacher):
+{
+  "title": "Regarding John's attendance",
+  "message": "John was absent today. Please contact the school if there are concerns.",
+  "type": "ATTENDANCE",
+  "recipientType": "INDIVIDUAL",
+  "recipientRoles": null,
+  "recipientIds": ["parent-uuid"],
+  "classroomIds": null
+}
+
+REQUEST (to whole class parents):
+{
+  "title": "Class 5A Field Trip",
+  "message": "The field trip to the museum is scheduled for Friday.",
+  "type": "GENERAL",
+  "recipientType": "CLASS",
+  "recipientRoles": null,
+  "recipientIds": null,
+  "classroomIds": ["classroom-uuid"]
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Staff Meeting Reminder",
+    "message": "Reminder: Staff meeting tomorrow at 3 PM in the main hall.",
+    "type": "GENERAL",
+    "recipientCount": 25,
+    "sentAt": "2026-02-07T10:00:00Z"
+  },
+  "message": "Notification sent successfully"
+}
+
+16.2 GET /notifications
+
+QUERY PARAMETERS:
+?unreadOnly=true&page=1&pageSize=20&type=ACADEMIC
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Exam Results Published",
+      "message": "Mathematics results are now available in the portal.",
+      "type": "ACADEMIC",
+      "isRead": false,
+      "sentAt": "2026-02-06T15:30:00Z",
+      "sender": "Mary Williams"
+    }
+  ],
+  "pagination": { /* standard */ }
+}
+
+================================================================================
+17. SETTINGS - REQUESTS & RESPONSES
+================================================================================
+
+17.1 PUT /settings/email
+
+REQUEST:
+{
+  "enabled": true,
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpUsername": "noreply@school.edu",
+  "smtpPassword": "encrypted_password",
+  "fromEmail": "noreply@school.edu",
+  "fromName": "St. Peter's School",
+  "useTLS": true,
+  "useSSL": false
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Email settings updated successfully"
+}
+
+17.2 PUT /settings/sms
+
+REQUEST:
+{
+  "enabled": true,
+  "provider": "TWILIO",
+  "apiKey": "your_api_key",
+  "apiSecret": "your_api_secret",
+  "senderId": "SCHOOL",
+  "customEndpoint": null
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "SMS settings updated successfully"
+}
+
+17.3 PUT /settings/notification-channels/{channelId}
+
+REQUEST:
+{
+  "channelId": "uuid",
+  "emailEnabled": true,
+  "smsEnabled": false
+}
+
+RESPONSE 200:
+{
+  "success": true,
+  "message": "Notification channel updated"
+}
+
+17.4 GET /settings/notification-channels
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Student Admitted",
+      "description": "Triggered when a new student is enrolled",
+      "category": "student",
+      "recipientRoles": ["parent", "admin", "headmaster"],
+      "emailEnabled": true,
+      "smsEnabled": false
+    }
+  ]
+}
+
+================================================================================
+18. ADMIN SETUP - REQUESTS & RESPONSES
+================================================================================
+
+18.1 POST /admin/academic-years
+
+REQUEST:
+{
+  "name": "2025-2026",
+  "startDate": "2025-09-01",
+  "endDate": "2026-07-31",
+  "isCurrent": true
+}
+
+RESPONSE 201:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "2025-2026",
+    "startDate": "2025-09-01",
+    "endDate": "2026-07-31",
+    "isCurrent": true
+  },
+  "message": "Academic year created"
+}
+
+18.2 POST /admin/terms
+
+REQUEST:
+{
+  "name": "Term 1",
+  "academicYearId": "uuid",
+  "startDate": "2025-09-01",
+  "endDate": "2025-12-15",
+  "orderNumber": 1
+}
+
+18.3 POST /admin/grade-levels
+
+REQUEST:
+{
+  "name": "Primary 5",
+  "code": "P5",
+  "level": 5
+}
+
+18.4 POST /admin/periods
+
+REQUEST:
+{
+  "name": "Period 1",
+  "startTime": "08:00",
+  "endTime": "08:45",
+  "orderNumber": 1
+}
+
+================================================================================
+19. REPORTS - SAMPLE RESPONSES
+================================================================================
+
+19.1 GET /reports/performance/best-worst-subjects
+
+QUERY: ?academicYear=2025-2026&term=Term1&classroomId=uuid&limit=10
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "bestSubjects": [
+      {
+        "subjectId": "uuid",
+        "subjectName": "Mathematics",
+        "averageScore": 78.5,
+        "studentCount": 35,
+        "passRate": 94.3,
+        "improvementFromPreviousTerm": 5.2
+      }
+    ],
+    "worstSubjects": [
+      {
+        "subjectId": "uuid",
+        "subjectName": "Science",
+        "averageScore": 52.1,
+        "studentCount": 35,
+        "passRate": 62.9,
+        "improvementFromPreviousTerm": -2.1
+      }
+    ]
+  }
+}
+
+19.2 GET /reports/risk/at-risk-students
+
+QUERY: ?academicYear=2025-2026&term=Term1&threshold=50
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": [
+    {
+      "studentId": "uuid",
+      "studentName": "John Smith",
+      "admissionNumber": "STU-2025-001",
+      "classroom": "Primary 5A",
+      "averageScore": 42.5,
+      "failingSubjects": ["Science", "English"],
+      "attendanceRate": 75.0,
+      "riskLevel": "HIGH"
+    }
+  ]
+}
+
+19.3 GET /reports/exports/inspection-reports
+
+QUERY: ?format=pdf&academicYear=2025-2026
+
+RESPONSE 200:
+- Content-Type: application/pdf (if format=pdf)
+- Content-Disposition: attachment; filename="inspection-report-2025-2026.pdf"
+- Or JSON structure if format=json
+
+================================================================================
+20. DASHBOARDS - SAMPLE RESPONSES
+================================================================================
+
+20.1 GET /dashboard/admin
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "stats": {
+      "totalStudents": 1250,
+      "totalTeachers": 65,
+      "totalClassrooms": 42,
+      "pendingApprovals": 8
+    },
+    "recentActivities": [
+      {
+        "type": "STUDENT_ADMISSION",
+        "message": "Emily Johnson admitted to Primary 5A",
+        "timestamp": "2026-02-07T09:30:00Z"
+      }
+    ],
+    "alerts": [
+      {
+        "type": "PENDING_APPROVAL",
+        "message": "5 exam results awaiting approval",
+        "actionUrl": "/head-master/approvals/exam-results"
+      }
+    ]
+  }
+}
+
+20.2 GET /dashboard/teacher
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "stats": {
+      "classesCount": 3,
+      "subjectsCount": 2,
+      "studentsCount": 95,
+      "syllabusProgress": 67
+    },
+    "upcomingExams": [
+      {
+        "id": "uuid",
+        "title": "Mathematics Mid-Term",
+        "date": "2026-03-15",
+        "classroom": "Primary 5A"
+      }
+    ],
+    "pendingLessons": 12
+  }
+}
+
+20.3 GET /dashboard/parent
+
+RESPONSE 200:
+{
+  "success": true,
+  "data": {
+    "children": [
+      {
+        "id": "uuid",
+        "name": "John Smith",
+        "classroom": "Primary 5A",
+        "attendanceRate": 92,
+        "latestResult": "B"
+      }
+    ],
+    "unreadNotifications": 3,
+    "outstandingFees": 0
+  }
+}
+
+================================================================================
+21. QUERY PARAMETERS REFERENCE
+================================================================================
+
+Common query parameters across list endpoints:
+
+page           - Page number (default: 1)
+pageSize       - Items per page (default: 20, max: 100)
+sortBy         - Field to sort by (e.g. createdAt, name)
+sortOrder      - asc | desc
+search         - Search term (searches relevant text fields)
+status         - ACTIVE | INACTIVE
+startDate      - YYYY-MM-DD (for date ranges)
+endDate        - YYYY-MM-DD
+classroomId    - Filter by classroom
+subjectId      - Filter by subject
+studentId      - Filter by student
+teacherId      - Filter by teacher
+academicYear   - Filter by academic year
+term           - Filter by term
+format         - json | csv | pdf (for report exports)
+
+================================================================================
+22. HTTP STATUS CODES
+================================================================================
+
+200 - OK (successful GET, PUT, PATCH)
+201 - Created (successful POST creating new resource)
+204 - No Content (successful DELETE)
+400 - Bad Request (validation errors, invalid input)
+401 - Unauthorized (missing or invalid token)
+403 - Forbidden (insufficient permissions)
+404 - Not Found (resource does not exist)
+409 - Conflict (duplicate resource, e.g. admission number exists)
+422 - Unprocessable Entity (business rule violation)
+500 - Internal Server Error
+
+================================================================================

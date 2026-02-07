@@ -1,0 +1,542 @@
+================================================================================
+REPORTS & ANALYTICS SYSTEM
+================================================================================
+
+All reports are accessible to ADMIN and HEAD_MASTER only.
+
+================================================================================
+1. PERFORMANCE OVERVIEW REPORTS
+================================================================================
+
+1.1 BEST/WORST SUBJECTS
+   Endpoint: GET /api/v1/reports/performance/best-worst-subjects
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   - classroomId (optional)
+   - limit (default: 10)
+   
+   Returns:
+   - Top performing subjects (by average score)
+   - Bottom performing subjects (by average score)
+   - Average scores, student counts, improvement trends
+   
+   Data Points:
+   - Subject name
+   - Average score
+   - Number of students
+   - Pass rate
+   - Improvement from previous term
+
+1.2 BEST/WORST STUDENTS
+   Endpoint: GET /api/v1/reports/performance/best-worst-students
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   - classroomId (optional)
+   - limit (default: 10)
+   
+   Returns:
+   - Top performing students (by overall average)
+   - Bottom performing students (by overall average)
+   - Student details, scores, trends
+
+1.3 MOST IMPROVED SUBJECTS
+   Endpoint: GET /api/v1/reports/performance/most-improved-subjects
+   Parameters:
+   - academicYear (required)
+   - term1, term2 (for comparison)
+   
+   Returns:
+   - Subjects with highest improvement percentage
+   - Previous and current scores
+   - Improvement percentage
+
+1.4 MOST IMPROVED STUDENTS
+   Endpoint: GET /api/v1/reports/performance/most-improved-students
+   Parameters:
+   - academicYear (required)
+   - term1, term2 (for comparison)
+   - classroomId (optional)
+   
+   Returns:
+   - Students with highest improvement
+   - Previous and current scores
+   - Improvement percentage
+
+1.5 TEACHER TARGETS
+   Endpoint: GET /api/v1/reports/performance/teacher-targets
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   
+   Returns:
+   - Teacher performance vs targets
+   - Target achievement percentage
+   - Areas needing improvement
+
+================================================================================
+2. TRENDS & GROWTH REPORTS
+================================================================================
+
+2.1 SUBJECT PERFORMANCE TREND
+   Endpoint: GET /api/v1/reports/trends/subject-performance
+   Parameters:
+   - subjectId (required)
+   - academicYear (optional)
+   - startDate, endDate (optional)
+   
+   Returns:
+   - Performance over time (line chart data)
+   - Average scores per term
+   - Trend direction (improving/declining/stable)
+
+2.2 STUDENT PERFORMANCE TREND
+   Endpoint: GET /api/v1/reports/trends/student-performance
+   Parameters:
+   - studentId (required)
+   - academicYear (optional)
+   - startDate, endDate (optional)
+   
+   Returns:
+   - Student performance over time
+   - Subject-wise trends
+   - Overall trend
+
+2.3 CLASS PERFORMANCE TREND
+   Endpoint: GET /api/v1/reports/trends/class-performance
+   Parameters:
+   - classroomId (required)
+   - academicYear (optional)
+   - startDate, endDate (optional)
+   
+   Returns:
+   - Class average over time
+   - Subject-wise class performance
+   - Comparison with school average
+
+================================================================================
+3. RISK & ALERTS REPORTS
+================================================================================
+
+3.1 AT-RISK STUDENTS
+   Endpoint: GET /api/v1/reports/risk/at-risk-students
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   - severity (LOW, MEDIUM, HIGH, CRITICAL)
+   
+   Returns:
+   - Students below performance threshold
+   - Risk factors (academic, attendance, behavior)
+   - Recommended interventions
+
+3.2 AT-RISK SUBJECTS
+   Endpoint: GET /api/v1/reports/risk/at-risk-subjects
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   
+   Returns:
+   - Subjects with low average scores
+   - Subjects with high failure rates
+   - Improvement recommendations
+
+3.3 TEACHER PERFORMANCE RISK
+   Endpoint: GET /api/v1/reports/risk/teacher-performance-risk
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   
+   Returns:
+   - Teachers with low student performance
+   - Teachers with high failure rates
+   - Support recommendations
+
+3.4 EXAM FAILURE FORECAST
+   Endpoint: GET /api/v1/reports/risk/exam-failure-forecast
+   Parameters:
+   - examId (optional)
+   - classroomId (optional)
+   - threshold (default: 50)
+   
+   Returns:
+   - Students predicted to fail
+   - Confidence level
+   - Intervention recommendations
+
+================================================================================
+4. TEACHER EFFECTIVENESS REPORTS
+================================================================================
+
+4.1 TEACHER VS SUBJECT
+   Endpoint: GET /api/v1/reports/teacher/teacher-vs-subject
+   Parameters:
+   - teacherId (optional)
+   - subjectId (optional)
+   - academicYear (optional)
+   
+   Returns:
+   - Teacher performance across different subjects
+   - Subject performance across different teachers
+   - Best teacher-subject matches
+
+4.2 TEACHER CONSISTENCY
+   Endpoint: GET /api/v1/reports/teacher/teacher-consistency
+   Parameters:
+   - teacherId (optional)
+   - academicYear (optional)
+   
+   Returns:
+   - Consistency score (variance in student performance)
+   - Performance stability over time
+   - Areas of inconsistency
+
+4.3 SYLLABUS COVERAGE
+   Endpoint: GET /api/v1/reports/teacher/syllabus-coverage
+   Parameters:
+   - teacherId (optional)
+   - subjectId (optional)
+   - academicYear (required)
+   - term (required)
+   
+   Returns:
+   - Syllabus completion percentage
+   - Topics covered vs planned
+   - On-track status
+
+4.4 TEACHER LOAD
+   Endpoint: GET /api/v1/reports/teacher/teacher-load
+   Parameters:
+   - academicYear (optional)
+   
+   Returns:
+   - Number of classes per teacher
+   - Number of subjects per teacher
+   - Total students per teacher
+   - Workload distribution
+
+================================================================================
+5. ASSESSMENT QUALITY REPORTS
+================================================================================
+
+5.1 CA VS EXAM VARIANCE
+   Endpoint: GET /api/v1/reports/assessment/ca-vs-exam-variance
+   Parameters:
+   - academicYear (optional)
+   - term (optional)
+   - subjectId (optional)
+   
+   Returns:
+   - Variance between CA scores and exam scores
+   - Subjects/students with high variance
+   - Assessment quality indicators
+
+5.2 RESULT DISTRIBUTION
+   Endpoint: GET /api/v1/reports/assessment/result-distribution
+   Parameters:
+   - examId (optional)
+   - subjectId (optional)
+   - classroomId (optional)
+   
+   Returns:
+   - Grade distribution (A, B, C, D, F counts)
+   - Histogram data
+   - Distribution analysis
+
+5.3 TOPICAL PERFORMANCE
+   Endpoint: GET /api/v1/reports/assessment/topical-performance
+   Parameters:
+   - subjectId (required)
+   - academicYear (optional)
+   - term (optional)
+   
+   Returns:
+   - Performance by topic/chapter
+   - Weak and strong topics
+   - Topic-wise average scores
+
+================================================================================
+6. ATTENDANCE IMPACT REPORTS
+================================================================================
+
+6.1 STUDENT ATTENDANCE PERFORMANCE
+   Endpoint: GET /api/v1/reports/attendance/student-attendance-performance
+   Parameters:
+   - studentId (optional)
+   - classroomId (optional)
+   - academicYear (optional)
+   - startDate, endDate (optional)
+   
+   Returns:
+   - Correlation between attendance and performance
+   - Attendance impact analysis
+   - Recommendations
+
+6.2 TEACHER ATTENDANCE RESULTS
+   Endpoint: GET /api/v1/reports/attendance/teacher-attendance-results
+   Parameters:
+   - teacherId (optional)
+   - academicYear (optional)
+   - startDate, endDate (optional)
+   
+   Returns:
+   - Teacher attendance rates
+   - Impact on student performance
+   - Attendance trends
+
+6.3 CLASS ATTENDANCE IMPACT
+   Endpoint: GET /api/v1/reports/attendance/class-attendance-impact
+   Parameters:
+   - classroomId (optional)
+   - academicYear (optional)
+   
+   Returns:
+   - Class attendance rates
+   - Correlation with class performance
+   - Attendance improvement recommendations
+
+================================================================================
+7. FORECAST & TARGETS REPORTS
+================================================================================
+
+7.1 SCHOOL-WIDE TARGETS
+   Endpoint: GET /api/v1/reports/forecast/school-wide-targets
+   Parameters:
+   - academicYear (required)
+   - term (optional)
+   
+   Returns:
+   - School-wide performance targets
+   - Current vs target comparison
+   - Achievement probability
+
+7.2 SUBJECT TARGET FORECAST
+   Endpoint: GET /api/v1/reports/forecast/subject-target-forecast
+   Parameters:
+   - subjectId (required)
+   - academicYear (required)
+   - targetScore (optional)
+   
+   Returns:
+   - Forecasted performance
+   - Target achievement probability
+   - Required improvements
+
+7.3 PROMOTION READINESS
+   Endpoint: GET /api/v1/reports/forecast/promotion-readiness
+   Parameters:
+   - classroomId (optional)
+   - academicYear (required)
+   - term (required)
+   
+   Returns:
+   - Students ready for promotion
+   - Students at risk of retention
+   - Promotion probability
+
+7.4 EXAM READINESS INDEX
+   Endpoint: GET /api/v1/reports/forecast/exam-readiness-index
+   Parameters:
+   - examId (optional)
+   - classroomId (optional)
+   
+   Returns:
+   - Readiness score (0-100)
+   - Preparedness indicators
+   - Areas needing attention
+
+================================================================================
+8. COMPARISONS REPORTS
+================================================================================
+
+8.1 CLASS TO CLASS COMPARISON
+   Endpoint: GET /api/v1/reports/comparisons/class-to-class
+   Parameters:
+   - classroomId1, classroomId2 (required)
+   - academicYear (optional)
+   - term (optional)
+   
+   Returns:
+   - Side-by-side comparison
+   - Performance differences
+   - Best practices identification
+
+8.2 TEACHER TO TEACHER COMPARISON
+   Endpoint: GET /api/v1/reports/comparisons/teacher-to-teacher
+   Parameters:
+   - teacherId1, teacherId2 (required)
+   - subjectId (optional)
+   - academicYear (optional)
+   
+   Returns:
+   - Performance comparison
+   - Teaching effectiveness comparison
+   - Best practices
+
+8.3 TERM TO TERM COMPARISON
+   Endpoint: GET /api/v1/reports/comparisons/term-to-term
+   Parameters:
+   - term1, term2 (required)
+   - academicYear (required)
+   - classroomId (optional)
+   
+   Returns:
+   - Performance changes
+   - Improvement/decline analysis
+   - Trend identification
+
+8.4 INTERNAL BENCHMARK
+   Endpoint: GET /api/v1/reports/comparisons/internal-benchmark
+   Parameters:
+   - academicYear (required)
+   - benchmarkType (SCHOOL, CLASS, SUBJECT)
+   
+   Returns:
+   - Benchmark scores
+   - Comparison with benchmarks
+   - Achievement status
+
+================================================================================
+9. EXPORTS & AUDIT REPORTS
+================================================================================
+
+9.1 INSPECTION REPORTS
+   Endpoint: GET /api/v1/reports/exports/inspection-reports
+   Parameters:
+   - academicYear (required)
+   - format (json, csv, pdf)
+   
+   Returns:
+   - Comprehensive school report
+   - All key metrics
+   - Ready for inspection
+
+9.2 EXPORT REPORTS
+   Endpoint: GET /api/v1/reports/exports/export-reports
+   Parameters:
+   - reportType (required)
+   - format (json, csv, pdf)
+   - filters (varies by report type)
+   
+   Returns:
+   - Exported report in requested format
+   - Includes metadata (generated date, user, filters)
+
+9.3 AUDIT TRAIL
+   Endpoint: GET /api/v1/reports/exports/audit-trail
+   Parameters:
+   - startDate, endDate (optional)
+   - userId (optional)
+   - action (optional)
+   - entityType (optional)
+   
+   Returns:
+   - All system activities
+   - User actions
+   - Data changes
+   - System events
+
+================================================================================
+10. REPORT IMPLEMENTATION
+================================================================================
+
+10.1 DATA AGGREGATION:
+   - Use database views for complex queries
+   - Cache frequently accessed reports
+   - Optimize queries with proper indexes
+   - Use stored procedures for complex calculations
+
+10.2 REPORT GENERATION:
+   - Generate reports on-demand
+   - Support async generation for large reports
+   - Store generated reports temporarily
+   - Support scheduled report generation
+
+10.3 EXPORT FORMATS:
+   - JSON: For API consumption
+   - CSV: For Excel import
+   - PDF: For printing/sharing
+   - Use libraries: iTextSharp (PDF), CsvHelper (CSV)
+
+10.4 PERFORMANCE:
+   - Paginate large datasets
+   - Use database aggregation
+   - Cache report results (5-15 minutes)
+   - Invalidate cache on data updates
+
+================================================================================
+11. REPORT RESPONSE STRUCTURE
+================================================================================
+
+Standard Response Format:
+{
+  "data": {
+    // Report-specific data
+  },
+  "metadata": {
+    "generatedAt": "ISO datetime",
+    "generatedBy": "user_id",
+    "filters": {
+      // Applied filters
+    },
+    "summary": {
+      // Key summary statistics
+    }
+  },
+  "pagination": {
+    // If applicable
+  }
+}
+
+================================================================================
+12. DASHBOARD ENDPOINTS
+================================================================================
+
+12.1 ADMIN DASHBOARD:
+   GET /api/v1/dashboard/admin
+   Returns:
+   - Total students, teachers, classrooms
+   - Overall attendance rate
+   - Average performance
+   - Pending approvals
+   - Recent activities
+   - Alerts
+
+12.2 HEADMASTER DASHBOARD:
+   GET /api/v1/dashboard/headmaster
+   Returns:
+   - School-wide metrics
+   - Pending approvals (exam results, syllabus)
+   - At-risk students
+   - Performance trends
+   - Recent submissions
+
+12.3 TEACHER DASHBOARD:
+   GET /api/v1/dashboard/teacher
+   Returns:
+   - Assigned classes and subjects
+   - Upcoming exams
+   - Pending lesson notes
+   - At-risk students in classes
+   - Recent activities
+
+12.4 STUDENT DASHBOARD:
+   GET /api/v1/dashboard/student
+   Returns:
+   - Academic performance
+   - Attendance summary
+   - Upcoming exams
+   - Recent results
+   - Assignments
+
+12.5 PARENT DASHBOARD:
+   GET /api/v1/dashboard/parent
+   Returns:
+   - Children's performance
+   - Attendance summary
+   - Fee status
+   - Upcoming events
+   - Recent notifications
+
+================================================================================

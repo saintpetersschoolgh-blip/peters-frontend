@@ -1246,15 +1246,15 @@ function AdminStyleListPage({ def }: { def: PageDef }) {
               </button>
             </>
           )}
-          {def.primaryActionLabel ? (
-            <button
-              onClick={openCreate}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              {ICONS.Add}
-              {def.primaryActionLabel}
-            </button>
-          ) : null}
+        {def.primaryActionLabel ? (
+          <button
+            onClick={openCreate}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            {ICONS.Add}
+            {def.primaryActionLabel}
+          </button>
+        ) : null}
         </div>
       </div>
 

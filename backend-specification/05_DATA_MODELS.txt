@@ -1,0 +1,667 @@
+================================================================================
+C# DATA MODELS AND DTOs
+================================================================================
+
+================================================================================
+1. ENTITY MODELS (Database Entities)
+================================================================================
+
+1.1 USER ENTITY:
+public class User
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; }
+    public string Email { get; set; }
+    public string PasswordHash { get; set; }
+    public UserRole Role { get; set; }
+    public UserStatus Status { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string? ProfileImageUrl { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public bool IsActive { get; set; }
+    
+    // Navigation properties
+    public Student? Student { get; set; }
+    public Teacher? Teacher { get; set; }
+    public Parent? Parent { get; set; }
+}
+
+public enum UserRole
+{
+    ADMIN,
+    TEACHER,
+    STUDENT,
+    PARENT,
+    HEAD_MASTER
+}
+
+public enum UserStatus
+{
+    ACTIVE,
+    INACTIVE
+}
+
+1.2 STUDENT ENTITY:
+public class Student
+{
+    public Guid Id { get; set; }
+    public string AdmissionNumber { get; set; }
+    public Guid? UserId { get; set; }
+    public Guid ParentId { get; set; }
+    public Guid ClassroomId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public DateTime DateOfBirth { get; set; }
+    public Gender Gender { get; set; }
+    public string? Address { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string EmergencyContact { get; set; }
+    public string? Email { get; set; }
+    public string? ProfileImageUrl { get; set; }
+    public DateTime EnrolledAt { get; set; }
+    public DateTime? LastPromotion { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public User? User { get; set; }
+    public Parent Parent { get; set; }
+    public Classroom Classroom { get; set; }
+    public ICollection<StudentAttendance> Attendances { get; set; }
+    public ICollection<ExamResult> ExamResults { get; set; }
+}
+
+public enum Gender
+{
+    MALE,
+    FEMALE
+}
+
+1.3 TEACHER ENTITY:
+public class Teacher
+{
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
+    public string StaffNumber { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public DateTime DateOfBirth { get; set; }
+    public Gender Gender { get; set; }
+    public string PhoneNumber { get; set; }
+    public string? Address { get; set; }
+    public string Email { get; set; }
+    public List<string> Qualifications { get; set; }
+    public DateTime JoinedAt { get; set; }
+    public string? ProfileImageUrl { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public User? User { get; set; }
+    public ICollection<TeacherSubject> TeacherSubjects { get; set; }
+    public ICollection<TeacherClassroom> TeacherClassrooms { get; set; }
+}
+
+1.4 PARENT ENTITY:
+public class Parent
+{
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Email { get; set; }
+    public string PhoneNumber { get; set; }
+    public string? Address { get; set; }
+    public string? Occupation { get; set; }
+    public Relationship Relationship { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public User? User { get; set; }
+    public ICollection<Student> Students { get; set; }
+}
+
+public enum Relationship
+{
+    FATHER,
+    MOTHER,
+    GUARDIAN
+}
+
+1.5 CLASSROOM ENTITY:
+public class Classroom
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public string? Code { get; set; }
+    public string? Description { get; set; }
+    public string AcademicYear { get; set; }
+    public Guid? ClassMasterId { get; set; }
+    public int Capacity { get; set; }
+    public int CurrentStudents { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public Teacher? ClassMaster { get; set; }
+    public ICollection<Student> Students { get; set; }
+    public ICollection<ClassroomSubject> ClassroomSubjects { get; set; }
+    public ICollection<TeacherClassroom> TeacherClassrooms { get; set; }
+}
+
+1.6 SUBJECT ENTITY:
+public class Subject
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; }
+    public string Name { get; set; }
+    public string? Description { get; set; }
+    public Guid? ClassroomId { get; set; }
+    public int TotalTopics { get; set; }
+    public int CompletedTopics { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public Classroom? Classroom { get; set; }
+    public ICollection<ClassroomSubject> ClassroomSubjects { get; set; }
+    public ICollection<TeacherSubject> TeacherSubjects { get; set; }
+    public ICollection<Exam> Exams { get; set; }
+    public Syllabus? Syllabus { get; set; }
+}
+
+1.7 EXAM ENTITY:
+public class Exam
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; }
+    public Guid SubjectId { get; set; }
+    public Guid ClassroomId { get; set; }
+    public string Term { get; set; }
+    public DateTime Date { get; set; }
+    public TimeSpan StartTime { get; set; }
+    public int Duration { get; set; } // minutes
+    public decimal TotalScore { get; set; }
+    public string Venue { get; set; }
+    public string? Instructions { get; set; }
+    public ExamStatus Status { get; set; }
+    public Guid CreatedById { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public Subject Subject { get; set; }
+    public Classroom Classroom { get; set; }
+    public User CreatedBy { get; set; }
+    public ICollection<ExamResult> Results { get; set; }
+}
+
+public enum ExamStatus
+{
+    UPCOMING,
+    IN_PROGRESS,
+    COMPLETED,
+    GRADED
+}
+
+1.8 EXAM_RESULT ENTITY:
+public class ExamResult
+{
+    public Guid Id { get; set; }
+    public Guid ExamId { get; set; }
+    public Guid StudentId { get; set; }
+    public decimal Score { get; set; }
+    public string Grade { get; set; }
+    public string? Remarks { get; set; }
+    public Guid EnteredById { get; set; }
+    public bool IsPublished { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public Exam Exam { get; set; }
+    public Student Student { get; set; }
+    public User EnteredBy { get; set; }
+}
+
+1.9 STUDENT_ATTENDANCE ENTITY:
+public class StudentAttendance
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public Guid ClassroomId { get; set; }
+    public DateTime Date { get; set; }
+    public AttendanceStatus Status { get; set; }
+    public Guid MarkedById { get; set; }
+    public string? Remarks { get; set; }
+    public bool IsApproved { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public Student Student { get; set; }
+    public Classroom Classroom { get; set; }
+    public User MarkedBy { get; set; }
+}
+
+public enum AttendanceStatus
+{
+    PRESENT,
+    ABSENT,
+    LATE,
+    PERMISSION
+}
+
+1.10 NOTIFICATION ENTITY:
+public class Notification
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; }
+    public string Message { get; set; }
+    public NotificationType Type { get; set; }
+    public RecipientType RecipientType { get; set; }
+    public List<UserRole>? RecipientRoles { get; set; }
+    public List<Guid>? RecipientIds { get; set; }
+    public List<Guid>? ClassroomIds { get; set; }
+    public Guid? RecipientTeacherId { get; set; }
+    public Guid SentById { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    
+    // Navigation properties
+    public User SentBy { get; set; }
+    public Teacher? RecipientTeacher { get; set; }
+    public ICollection<NotificationRecipient> Recipients { get; set; }
+}
+
+public enum NotificationType
+{
+    GENERAL,
+    ACADEMIC,
+    FINANCIAL,
+    ATTENDANCE,
+    IMPORTANT
+}
+
+public enum RecipientType
+{
+    ALL,
+    ROLE,
+    INDIVIDUAL,
+    CLASS
+}
+
+================================================================================
+2. DTOs (Data Transfer Objects)
+================================================================================
+
+2.1 AUTHENTICATION DTOs:
+public class LoginRequest
+{
+    [Required]
+    public string Username { get; set; }
+    
+    [Required]
+    [MinLength(8)]
+    public string Password { get; set; }
+}
+
+public class AuthResponse
+{
+    public string Token { get; set; }
+    public string RefreshToken { get; set; }
+    public int ExpiresIn { get; set; }
+    public UserDto User { get; set; }
+}
+
+public class UserDto
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; }
+    public string Email { get; set; }
+    public UserRole Role { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public UserStatus Status { get; set; }
+    public string? ProfileImage { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+}
+
+2.2 STUDENT DTOs:
+public class StudentDto
+{
+    public Guid Id { get; set; }
+    public string AdmissionNumber { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public DateTime DateOfBirth { get; set; }
+    public Gender Gender { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public Guid ParentId { get; set; }
+    public string ParentName { get; set; }
+    public Guid ClassroomId { get; set; }
+    public string ClassroomName { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class CreateStudentRequest
+{
+    [Required]
+    public string AdmissionNumber { get; set; }
+    
+    [Required]
+    public string FirstName { get; set; }
+    
+    [Required]
+    public string LastName { get; set; }
+    
+    [Required]
+    public DateTime DateOfBirth { get; set; }
+    
+    [Required]
+    public Gender Gender { get; set; }
+    
+    public string? Address { get; set; }
+    
+    [Required]
+    public string PhoneNumber { get; set; }
+    
+    [Required]
+    public string EmergencyContact { get; set; }
+    
+    [EmailAddress]
+    public string? Email { get; set; }
+    
+    [Required]
+    public Guid ParentId { get; set; }
+    
+    [Required]
+    public Guid ClassroomId { get; set; }
+}
+
+public class UpdateStudentRequest
+{
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? Address { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? EmergencyContact { get; set; }
+    public string? Email { get; set; }
+    public Guid? ParentId { get; set; }
+    public Guid? ClassroomId { get; set; }
+}
+
+2.3 EXAM DTOs:
+public class ExamDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; }
+    public Guid SubjectId { get; set; }
+    public string SubjectName { get; set; }
+    public Guid ClassroomId { get; set; }
+    public string ClassroomName { get; set; }
+    public string Term { get; set; }
+    public DateTime Date { get; set; }
+    public TimeSpan StartTime { get; set; }
+    public int Duration { get; set; }
+    public decimal TotalScore { get; set; }
+    public string Venue { get; set; }
+    public string? Instructions { get; set; }
+    public ExamStatus Status { get; set; }
+}
+
+public class CreateExamRequest
+{
+    [Required]
+    public string Title { get; set; }
+    
+    [Required]
+    public Guid SubjectId { get; set; }
+    
+    [Required]
+    public Guid ClassroomId { get; set; }
+    
+    [Required]
+    public string Term { get; set; }
+    
+    [Required]
+    public DateTime Date { get; set; }
+    
+    [Required]
+    public TimeSpan StartTime { get; set; }
+    
+    [Required]
+    [Range(1, 600)]
+    public int Duration { get; set; }
+    
+    [Required]
+    [Range(0, 1000)]
+    public decimal TotalScore { get; set; }
+    
+    [Required]
+    public string Venue { get; set; }
+    
+    public string? Instructions { get; set; }
+}
+
+2.4 EXAM_RESULT DTOs:
+public class ExamResultDto
+{
+    public Guid Id { get; set; }
+    public Guid ExamId { get; set; }
+    public string ExamTitle { get; set; }
+    public Guid StudentId { get; set; }
+    public string StudentName { get; set; }
+    public string AdmissionNumber { get; set; }
+    public decimal Score { get; set; }
+    public string Grade { get; set; }
+    public string? Remarks { get; set; }
+    public bool IsPublished { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CreateExamResultRequest
+{
+    [Required]
+    public Guid ExamId { get; set; }
+    
+    [Required]
+    public Guid StudentId { get; set; }
+    
+    [Required]
+    [Range(0, 1000)]
+    public decimal Score { get; set; }
+    
+    [Required]
+    public string Grade { get; set; }
+    
+    public string? Remarks { get; set; }
+}
+
+public class BulkExamResultRequest
+{
+    [Required]
+    public Guid ExamId { get; set; }
+    
+    [Required]
+    public List<CreateExamResultRequest> Results { get; set; }
+}
+
+2.5 ATTENDANCE DTOs:
+public class StudentAttendanceDto
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public string StudentName { get; set; }
+    public string AdmissionNumber { get; set; }
+    public Guid ClassroomId { get; set; }
+    public string ClassroomName { get; set; }
+    public DateTime Date { get; set; }
+    public AttendanceStatus Status { get; set; }
+    public string? Remarks { get; set; }
+    public bool IsApproved { get; set; }
+}
+
+public class CreateAttendanceRequest
+{
+    [Required]
+    public Guid StudentId { get; set; }
+    
+    [Required]
+    public Guid ClassroomId { get; set; }
+    
+    [Required]
+    public DateTime Date { get; set; }
+    
+    [Required]
+    public AttendanceStatus Status { get; set; }
+    
+    public string? Remarks { get; set; }
+}
+
+public class BulkAttendanceRequest
+{
+    [Required]
+    public Guid ClassroomId { get; set; }
+    
+    [Required]
+    public DateTime Date { get; set; }
+    
+    [Required]
+    public List<CreateAttendanceRequest> Attendances { get; set; }
+}
+
+2.6 NOTIFICATION DTOs:
+public class NotificationDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; }
+    public string Message { get; set; }
+    public NotificationType Type { get; set; }
+    public RecipientType RecipientType { get; set; }
+    public string SenderName { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CreateNotificationRequest
+{
+    [Required]
+    public string Title { get; set; }
+    
+    [Required]
+    public string Message { get; set; }
+    
+    [Required]
+    public NotificationType Type { get; set; }
+    
+    [Required]
+    public RecipientType RecipientType { get; set; }
+    
+    public List<UserRole>? RecipientRoles { get; set; }
+    public List<Guid>? RecipientIds { get; set; }
+    public List<Guid>? ClassroomIds { get; set; }
+    public Guid? RecipientTeacherId { get; set; }
+}
+
+2.7 PAGINATION DTOs:
+public class PagedResponse<T>
+{
+    public List<T> Data { get; set; }
+    public PaginationInfo Pagination { get; set; }
+}
+
+public class PaginationInfo
+{
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+    public bool HasNext { get; set; }
+    public bool HasPrevious { get; set; }
+}
+
+2.8 RESPONSE DTOs:
+public class ApiResponse<T>
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
+    public List<string>? Errors { get; set; }
+}
+
+public class ErrorResponse
+{
+    public string Error { get; set; }
+    public string Message { get; set; }
+    public Dictionary<string, object>? Details { get; set; }
+}
+
+================================================================================
+3. MAPPING CONFIGURATION (AutoMapper)
+================================================================================
+
+Example AutoMapper Profile:
+public class MappingProfile : Profile
+{
+    public MappingProfile()
+    {
+        CreateMap<Student, StudentDto>();
+        CreateMap<CreateStudentRequest, Student>();
+        CreateMap<UpdateStudentRequest, Student>()
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+        
+        CreateMap<Exam, ExamDto>();
+        CreateMap<CreateExamRequest, Exam>();
+        
+        CreateMap<ExamResult, ExamResultDto>();
+        CreateMap<CreateExamResultRequest, ExamResult>();
+        
+        CreateMap<User, UserDto>();
+        CreateMap<Notification, NotificationDto>();
+    }
+}
+
+================================================================================
+4. VALIDATION ATTRIBUTES
+================================================================================
+
+Use FluentValidation for complex validation:
+
+public class CreateStudentRequestValidator : AbstractValidator<CreateStudentRequest>
+{
+    public CreateStudentRequestValidator()
+    {
+        RuleFor(x => x.AdmissionNumber)
+            .NotEmpty()
+            .MaximumLength(50);
+        
+        RuleFor(x => x.FirstName)
+            .NotEmpty()
+            .MaximumLength(100);
+        
+        RuleFor(x => x.DateOfBirth)
+            .NotEmpty()
+            .LessThan(DateTime.Today.AddYears(-5))
+            .WithMessage("Student must be at least 5 years old");
+        
+        RuleFor(x => x.Email)
+            .EmailAddress()
+            .When(x => !string.IsNullOrEmpty(x.Email));
+    }
+}
+
+================================================================================

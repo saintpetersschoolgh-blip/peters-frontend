@@ -1,0 +1,701 @@
+================================================================================
+COMPLETE API ENDPOINTS SPECIFICATION
+================================================================================
+
+Base URL: /api/v1
+All endpoints require Authorization header: Bearer {token}
+Unless specified, all dates are in ISO 8601 format
+
+================================================================================
+AUTHENTICATION ENDPOINTS
+================================================================================
+
+POST   /auth/login
+POST   /auth/refresh
+POST   /auth/logout
+POST   /auth/forgot-password
+POST   /auth/reset-password
+GET    /auth/me
+
+(Details in 03_AUTHENTICATION.txt)
+
+================================================================================
+USER MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /users
+GET    /users/{id}
+POST   /users
+PUT    /users/{id}
+DELETE /users/{id}
+PATCH  /users/{id}/status
+GET    /users/{id}/permissions
+
+Access: ADMIN only
+
+Request/Response examples:
+- GET /users?role=TEACHER&status=ACTIVE&page=1&pageSize=20
+- POST /users - Create new user
+- PUT /users/{id} - Update user
+- PATCH /users/{id}/status - Activate/Deactivate user
+
+================================================================================
+STUDENT MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /students
+GET    /students/{id}
+POST   /students
+PUT    /students/{id}
+DELETE /students/{id}
+PATCH  /students/{id}/status
+GET    /students/{id}/profile
+GET    /students/{id}/academic-records
+GET    /students/{id}/attendance
+GET    /students/{id}/fees
+GET    /students/{id}/exams
+GET    /students/{id}/assignments
+GET    /students/classroom/{classroomId}
+GET    /students/search?q={query}
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (assigned classes), STUDENT (own), PARENT (children)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /students):
+{
+  "admissionNumber": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "dateOfBirth": "YYYY-MM-DD",
+  "gender": "MALE|FEMALE",
+  "address": "string",
+  "phoneNumber": "string",
+  "emergencyContact": "string",
+  "email": "string (optional)",
+  "parentId": "uuid",
+  "classroomId": "uuid"
+}
+
+================================================================================
+TEACHER MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /teachers
+GET    /teachers/{id}
+POST   /teachers
+PUT    /teachers/{id}
+DELETE /teachers/{id}
+PATCH  /teachers/{id}/status
+GET    /teachers/{id}/profile
+GET    /teachers/{id}/classrooms
+GET    /teachers/{id}/subjects
+GET    /teachers/{id}/timetable
+GET    /teachers/{id}/students
+GET    /teachers/{id}/attendance
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (own)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /teachers):
+{
+  "staffNumber": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "dateOfBirth": "YYYY-MM-DD",
+  "gender": "MALE|FEMALE",
+  "phoneNumber": "string",
+  "address": "string",
+  "email": "string",
+  "qualifications": ["string"],
+  "subjectIds": ["uuid"],
+  "classroomIds": ["uuid"]
+}
+
+================================================================================
+PARENT MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /parents
+GET    /parents/{id}
+POST   /parents
+PUT    /parents/{id}
+DELETE /parents/{id}
+PATCH  /parents/{id}/status
+GET    /parents/{id}/children
+GET    /parents/{id}/notifications
+
+Access:
+- GET: ADMIN, HEAD_MASTER, PARENT (own)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /parents):
+{
+  "firstName": "string",
+  "lastName": "string",
+  "email": "string",
+  "phoneNumber": "string",
+  "address": "string",
+  "occupation": "string (optional)",
+  "relationship": "FATHER|MOTHER|GUARDIAN"
+}
+
+================================================================================
+CLASSROOM MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /classrooms
+GET    /classrooms/{id}
+POST   /classrooms
+PUT    /classrooms/{id}
+DELETE /classrooms/{id}
+PATCH  /classrooms/{id}/status
+GET    /classrooms/{id}/students
+GET    /classrooms/{id}/subjects
+GET    /classrooms/{id}/teachers
+GET    /classrooms/{id}/attendance
+GET    /classrooms/{id}/performance
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (assigned), STUDENT (own class)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /classrooms):
+{
+  "name": "string",
+  "code": "string (optional)",
+  "description": "string (optional)",
+  "academicYear": "string",
+  "classMasterId": "uuid",
+  "capacity": "integer",
+  "subjectIds": ["uuid"]
+}
+
+================================================================================
+SUBJECT MANAGEMENT ENDPOINTS
+================================================================================
+
+GET    /subjects
+GET    /subjects/{id}
+POST   /subjects
+PUT    /subjects/{id}
+DELETE /subjects/{id}
+PATCH  /subjects/{id}/status
+GET    /subjects/{id}/teachers
+GET    /subjects/{id}/syllabus
+GET    /subjects/{id}/exams
+GET    /subjects/{id}/performance
+
+Access:
+- GET: All authenticated users
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /subjects):
+{
+  "code": "string",
+  "name": "string",
+  "description": "string (optional)",
+  "classroomId": "uuid",
+  "teacherIds": ["uuid"]
+}
+
+================================================================================
+ATTENDANCE ENDPOINTS
+================================================================================
+
+STUDENT ATTENDANCE:
+GET    /attendance/students
+GET    /attendance/students/{id}
+POST   /attendance/students
+PUT    /attendance/students/{id}
+GET    /attendance/students/classroom/{classroomId}?date={YYYY-MM-DD}
+GET    /attendance/students/student/{studentId}?startDate={date}&endDate={date}
+POST   /attendance/students/bulk
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (assigned classes), STUDENT (own), PARENT (children)
+- POST/PUT: ADMIN, HEAD_MASTER, TEACHER (assigned classes)
+
+Request Body (POST /attendance/students):
+{
+  "studentId": "uuid",
+  "classroomId": "uuid",
+  "date": "YYYY-MM-DD",
+  "status": "PRESENT|ABSENT|LATE|PERMISSION",
+  "remarks": "string (optional)"
+}
+
+Bulk Attendance (POST /attendance/students/bulk):
+{
+  "classroomId": "uuid",
+  "date": "YYYY-MM-DD",
+  "attendances": [
+    {
+      "studentId": "uuid",
+      "status": "PRESENT|ABSENT|LATE|PERMISSION",
+      "remarks": "string (optional)"
+    }
+  ]
+}
+
+TEACHER ATTENDANCE:
+GET    /attendance/teachers
+GET    /attendance/teachers/{id}
+POST   /attendance/teachers
+PUT    /attendance/teachers/{id}
+GET    /attendance/teachers/teacher/{teacherId}?startDate={date}&endDate={date}
+
+Access:
+- GET: ADMIN, HEAD_MASTER
+- POST/PUT: ADMIN, HEAD_MASTER
+
+Request Body (POST /attendance/teachers):
+{
+  "teacherId": "uuid",
+  "date": "YYYY-MM-DD",
+  "status": "PRESENT|ABSENT|LATE|PERMISSION",
+  "remarks": "string (optional)"
+}
+
+================================================================================
+ACADEMIC - EXAMS ENDPOINTS
+================================================================================
+
+GET    /academic/exams
+GET    /academic/exams/{id}
+POST   /academic/exams
+PUT    /academic/exams/{id}
+DELETE /academic/exams/{id}
+PATCH  /academic/exams/{id}/status
+GET    /academic/exams/classroom/{classroomId}
+GET    /academic/exams/subject/{subjectId}
+GET    /academic/exams/upcoming
+GET    /academic/exams/{id}/results
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER, STUDENT (own), PARENT (children)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER, TEACHER (assigned subjects)
+
+Request Body (POST /academic/exams):
+{
+  "title": "string",
+  "subjectId": "uuid",
+  "classroomId": "uuid",
+  "term": "string",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:mm",
+  "duration": "integer (minutes)",
+  "totalScore": "decimal",
+  "venue": "string",
+  "instructions": "string (optional)"
+}
+
+================================================================================
+ACADEMIC - EXAM RESULTS ENDPOINTS
+================================================================================
+
+GET    /academic/results
+GET    /academic/results/{id}
+POST   /academic/results
+PUT    /academic/results/{id}
+DELETE /academic/results/{id}
+POST   /academic/results/bulk
+GET    /academic/results/exam/{examId}
+GET    /academic/results/student/{studentId}
+GET    /academic/results/classroom/{classroomId}
+PATCH  /academic/results/{id}/publish
+POST   /academic/results/bulk-publish
+GET    /academic/results/{id}/approve (HEAD_MASTER only)
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER, STUDENT (own), PARENT (children)
+- POST/PUT: ADMIN, HEAD_MASTER, TEACHER (assigned subjects)
+- Approve: HEAD_MASTER only
+
+Request Body (POST /academic/results):
+{
+  "examId": "uuid",
+  "studentId": "uuid",
+  "score": "decimal",
+  "grade": "string",
+  "remarks": "string (optional)"
+}
+
+Bulk Results (POST /academic/results/bulk):
+{
+  "examId": "uuid",
+  "results": [
+    {
+      "studentId": "uuid",
+      "score": "decimal",
+      "grade": "string",
+      "remarks": "string (optional)"
+    }
+  ]
+}
+
+================================================================================
+SYLLABUS ENDPOINTS
+================================================================================
+
+GET    /syllabus
+GET    /syllabus/{id}
+POST   /syllabus
+PUT    /syllabus/{id}
+DELETE /syllabus/{id}
+GET    /syllabus/subject/{subjectId}
+GET    /syllabus/{id}/topics
+POST   /syllabus/{id}/topics
+PUT    /syllabus/{id}/topics/{topicId}
+DELETE /syllabus/{id}/topics/{topicId}
+GET    /syllabus/{id}/progress
+POST   /syllabus/{id}/submit
+GET    /syllabus/{id}/approve (HEAD_MASTER only)
+POST   /syllabus/{id}/approve
+POST   /syllabus/{id}/reject
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER, TEACHER (assigned subjects)
+- Approve/Reject: HEAD_MASTER only
+
+Request Body (POST /syllabus):
+{
+  "subjectId": "uuid",
+  "topics": [
+    {
+      "title": "string",
+      "description": "string (optional)",
+      "orderNumber": "integer"
+    }
+  ]
+}
+
+================================================================================
+TIMETABLE ENDPOINTS
+================================================================================
+
+GET    /timetable
+GET    /timetable/{id}
+POST   /timetable
+PUT    /timetable/{id}
+DELETE /timetable/{id}
+GET    /timetable/classroom/{classroomId}
+GET    /timetable/teacher/{teacherId}
+GET    /timetable/day/{dayOfWeek} // 1-7
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (own), STUDENT (own class)
+- POST/PUT/DELETE: ADMIN, HEAD_MASTER
+
+Request Body (POST /timetable):
+{
+  "subjectId": "uuid",
+  "teacherId": "uuid",
+  "classroomId": "uuid",
+  "dayOfWeek": "integer (1-7)",
+  "startTime": "HH:mm",
+  "endTime": "HH:mm",
+  "period": "integer"
+}
+
+================================================================================
+LESSON NOTES ENDPOINTS
+================================================================================
+
+GET    /lesson-notes
+GET    /lesson-notes/{id}
+POST   /lesson-notes
+PUT    /lesson-notes/{id}
+DELETE /lesson-notes/{id}
+GET    /lesson-notes/teacher/{teacherId}
+GET    /lesson-notes/timetable/{timetableId}
+POST   /lesson-notes/{id}/approve
+
+Access:
+- GET: ADMIN, HEAD_MASTER, TEACHER (own)
+- POST/PUT/DELETE: TEACHER (own), ADMIN, HEAD_MASTER
+- Approve: HEAD_MASTER, ADMIN
+
+Request Body (POST /lesson-notes):
+{
+  "timetableId": "uuid",
+  "topicsCovered": "string",
+  "objectives": "string",
+  "materials": "string",
+  "activities": "string",
+  "assessment": "string",
+  "homework": "string (optional)",
+  "remarks": "string (optional)"
+}
+
+================================================================================
+FINANCIAL - FEE STRUCTURE ENDPOINTS
+================================================================================
+
+GET    /finance/fees
+GET    /finance/fees/{id}
+POST   /finance/fees
+PUT    /finance/fees/{id}
+DELETE /finance/fees/{id}
+GET    /finance/fees/classroom/{classroomId}
+GET    /finance/fees/term/{term}
+
+Access: ADMIN, HEAD_MASTER
+
+Request Body (POST /finance/fees):
+{
+  "classroomId": "uuid",
+  "term": "string",
+  "academicYear": "string",
+  "tuitionFee": "decimal",
+  "examFee": "decimal",
+  "labFee": "decimal (optional)",
+  "libraryFee": "decimal (optional)",
+  "transportFee": "decimal (optional)",
+  "otherFees": {
+    "feeName": "amount"
+  }
+}
+
+================================================================================
+FINANCIAL - PAYMENTS ENDPOINTS
+================================================================================
+
+GET    /finance/payments
+GET    /finance/payments/{id}
+POST   /finance/payments
+PUT    /finance/payments/{id}
+GET    /finance/payments/student/{studentId}
+GET    /finance/payments/classroom/{classroomId}
+GET    /finance/payments/date-range?startDate={date}&endDate={date}
+
+Access:
+- GET: ADMIN, HEAD_MASTER, STUDENT (own), PARENT (children)
+- POST/PUT: ADMIN, HEAD_MASTER
+
+Request Body (POST /finance/payments):
+{
+  "studentId": "uuid",
+  "feeStructureId": "uuid",
+  "amount": "decimal",
+  "paymentDate": "YYYY-MM-DD",
+  "paymentMethod": "CASH|BANK_TRANSFER|CHEQUE|ONLINE",
+  "transactionId": "string (optional)",
+  "remarks": "string (optional)"
+}
+
+================================================================================
+NOTIFICATIONS ENDPOINTS
+================================================================================
+
+GET    /notifications
+GET    /notifications/{id}
+POST   /notifications
+PUT    /notifications/{id}
+DELETE /notifications/{id}
+GET    /notifications/unread
+PATCH  /notifications/{id}/read
+PATCH  /notifications/read-all
+GET    /notifications/flagged
+
+Access:
+- GET: All authenticated users (filtered by recipient)
+- POST: ADMIN, HEAD_MASTER, TEACHER, PARENT
+- DELETE: ADMIN, HEAD_MASTER, SENDER
+
+Request Body (POST /notifications):
+{
+  "title": "string",
+  "message": "string",
+  "type": "GENERAL|ACADEMIC|FINANCIAL|ATTENDANCE|IMPORTANT",
+  "recipientType": "ALL|ROLE|INDIVIDUAL|CLASS",
+  "recipientRoles": ["ADMIN", "TEACHER"], // if recipientType is ROLE
+  "recipientIds": ["uuid"], // if recipientType is INDIVIDUAL
+  "classroomIds": ["uuid"], // if recipientType is CLASS
+  "recipientTeacherId": "uuid" // for parent-to-teacher messages
+}
+
+================================================================================
+SETTINGS ENDPOINTS
+================================================================================
+
+EMAIL CONFIG:
+GET    /settings/email
+PUT    /settings/email
+POST   /settings/email/test
+
+SMS CONFIG:
+GET    /settings/sms
+PUT    /settings/sms
+POST   /settings/sms/test
+
+NOTIFICATION CHANNELS:
+GET    /settings/notification-channels
+PUT    /settings/notification-channels/{channelId}
+GET    /settings/notification-channels/category/{category}
+GET    /settings/notification-channels/role/{role}
+
+Access: ADMIN, HEAD_MASTER
+
+Request Body (PUT /settings/email):
+{
+  "enabled": "boolean",
+  "smtpHost": "string",
+  "smtpPort": "integer",
+  "smtpUsername": "string",
+  "smtpPassword": "string",
+  "fromEmail": "string",
+  "fromName": "string",
+  "useTLS": "boolean",
+  "useSSL": "boolean"
+}
+
+================================================================================
+ADMIN SETUP ENDPOINTS
+================================================================================
+
+ACADEMIC YEARS:
+GET    /admin/academic-years
+GET    /admin/academic-years/{id}
+POST   /admin/academic-years
+PUT    /admin/academic-years/{id}
+DELETE /admin/academic-years/{id}
+
+TERMS:
+GET    /admin/terms
+GET    /admin/terms/{id}
+POST   /admin/terms
+PUT    /admin/terms/{id}
+DELETE /admin/terms/{id}
+GET    /admin/terms/academic-year/{academicYearId}
+
+GRADE LEVELS:
+GET    /admin/grade-levels
+GET    /admin/grade-levels/{id}
+POST   /admin/grade-levels
+PUT    /admin/grade-levels/{id}
+DELETE /admin/grade-levels/{id}
+
+PERIODS:
+GET    /admin/periods
+GET    /admin/periods/{id}
+POST   /admin/periods
+PUT    /admin/periods/{id}
+DELETE /admin/periods/{id}
+
+Access: ADMIN, HEAD_MASTER
+
+================================================================================
+REPORTS & ANALYTICS ENDPOINTS
+================================================================================
+
+(All reports access: ADMIN, HEAD_MASTER only)
+
+PERFORMANCE REPORTS:
+GET    /reports/performance/best-worst-subjects
+GET    /reports/performance/best-worst-students
+GET    /reports/performance/most-improved-subjects
+GET    /reports/performance/most-improved-students
+GET    /reports/performance/teacher-targets
+
+TRENDS REPORTS:
+GET    /reports/trends/subject-performance
+GET    /reports/trends/student-performance
+GET    /reports/trends/class-performance
+
+RISK REPORTS:
+GET    /reports/risk/at-risk-students
+GET    /reports/risk/at-risk-subjects
+GET    /reports/risk/teacher-performance-risk
+GET    /reports/risk/exam-failure-forecast
+
+TEACHER REPORTS:
+GET    /reports/teacher/teacher-vs-subject
+GET    /reports/teacher/teacher-consistency
+GET    /reports/teacher/syllabus-coverage
+GET    /reports/teacher/teacher-load
+
+ASSESSMENT REPORTS:
+GET    /reports/assessment/ca-vs-exam-variance
+GET    /reports/assessment/result-distribution
+GET    /reports/assessment/topical-performance
+
+ATTENDANCE REPORTS:
+GET    /reports/attendance/student-attendance-performance
+GET    /reports/attendance/teacher-attendance-results
+GET    /reports/attendance/class-attendance-impact
+
+FORECAST REPORTS:
+GET    /reports/forecast/school-wide-targets
+GET    /reports/forecast/subject-target-forecast
+GET    /reports/forecast/promotion-readiness
+GET    /reports/forecast/exam-readiness-index
+
+COMPARISON REPORTS:
+GET    /reports/comparisons/class-to-class
+GET    /reports/comparisons/teacher-to-teacher
+GET    /reports/comparisons/term-to-term
+GET    /reports/comparisons/internal-benchmark
+
+EXPORT REPORTS:
+GET    /reports/exports/inspection-reports
+GET    /reports/exports/export-reports
+GET    /reports/exports/audit-trail
+
+All report endpoints support query parameters:
+- startDate, endDate
+- classroomId, subjectId, studentId, teacherId
+- term, academicYear
+- format (json, csv, pdf)
+
+================================================================================
+DASHBOARD ENDPOINTS
+================================================================================
+
+GET    /dashboard/stats
+GET    /dashboard/admin
+GET    /dashboard/headmaster
+GET    /dashboard/teacher
+GET    /dashboard/student
+GET    /dashboard/parent
+
+Access: Role-specific dashboards
+
+Response includes:
+- Key metrics
+- Recent activities
+- Alerts
+- Quick actions
+
+================================================================================
+PAGINATION
+================================================================================
+
+All list endpoints support pagination:
+?page=1&pageSize=20&sortBy=createdAt&sortOrder=desc
+
+Response includes:
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 100,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrevious": false
+  }
+}
+
+================================================================================
+FILTERING & SEARCH
+================================================================================
+
+Most endpoints support:
+- Search: ?search={query}
+- Filters: ?status=ACTIVE&role=TEACHER
+- Date ranges: ?startDate={date}&endDate={date}
+
+================================================================================

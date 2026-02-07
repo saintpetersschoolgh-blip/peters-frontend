@@ -1,0 +1,319 @@
+================================================================================
+AUTHENTICATION & AUTHORIZATION SYSTEM
+================================================================================
+
+================================================================================
+1. AUTHENTICATION FLOW
+================================================================================
+
+1.1 LOGIN PROCESS:
+   - User submits username/email and password
+   - Backend validates credentials
+   - If valid, generate JWT token
+   - Return token + user information
+   - Frontend stores token in localStorage
+
+1.2 TOKEN STRUCTURE:
+   - Access Token: Short-lived (15-30 minutes)
+   - Refresh Token: Long-lived (7-30 days)
+   - Token contains: userId, role, email, username
+
+1.3 PASSWORD REQUIREMENTS:
+   - Minimum 8 characters
+   - Must contain uppercase, lowercase, number
+   - Store hashed using BCrypt (cost factor 12)
+
+================================================================================
+2. API ENDPOINTS - AUTHENTICATION
+================================================================================
+
+2.1 POST /api/v1/auth/login
+   Request Body:
+   {
+     "username": "string", // or email
+     "password": "string"
+   }
+   
+   Response (200):
+   {
+     "token": "jwt_token_string",
+     "refreshToken": "refresh_token_string",
+     "expiresIn": 1800, // seconds
+     "user": {
+       "id": "uuid",
+       "username": "string",
+       "email": "string",
+       "role": "ADMIN|TEACHER|STUDENT|PARENT|HEAD_MASTER",
+       "firstName": "string",
+       "lastName": "string",
+       "status": "ACTIVE|INACTIVE",
+       "profileImage": "url or null"
+     }
+   }
+   
+   Errors:
+   - 401: Invalid credentials
+   - 400: Missing username or password
+   - 403: Account is inactive
+
+2.2 POST /api/v1/auth/refresh
+   Headers:
+   - Authorization: Bearer {refreshToken}
+   
+   Response (200):
+   {
+     "token": "new_jwt_token",
+     "expiresIn": 1800
+   }
+   
+   Errors:
+   - 401: Invalid or expired refresh token
+
+2.3 POST /api/v1/auth/logout
+   Headers:
+   - Authorization: Bearer {token}
+   
+   Response (200):
+   {
+     "message": "Logged out successfully"
+   }
+
+2.4 POST /api/v1/auth/forgot-password
+   Request Body:
+   {
+     "email": "string"
+   }
+   
+   Response (200):
+   {
+     "message": "Password reset link sent to email"
+   }
+   
+   Note: Generate reset token, store in database with expiry, send email
+
+2.5 POST /api/v1/auth/reset-password
+   Request Body:
+   {
+     "token": "reset_token_from_email",
+     "newPassword": "string"
+   }
+   
+   Response (200):
+   {
+     "message": "Password reset successfully"
+   }
+   
+   Errors:
+   - 400: Invalid or expired token
+   - 400: Password doesn't meet requirements
+
+2.6 GET /api/v1/auth/me
+   Headers:
+   - Authorization: Bearer {token}
+   
+   Response (200):
+   {
+     "user": {
+       "id": "uuid",
+       "username": "string",
+       "email": "string",
+       "role": "string",
+       "firstName": "string",
+       "lastName": "string",
+       "status": "string",
+       "profileImage": "url or null",
+       "lastLoginAt": "iso_datetime or null"
+     }
+   }
+   
+   Errors:
+   - 401: Invalid or expired token
+
+================================================================================
+3. AUTHORIZATION - ROLE-BASED ACCESS CONTROL (RBAC)
+================================================================================
+
+3.1 ROLE PERMISSIONS MATRIX:
+
+ADMIN:
+- Full access to all endpoints
+- User management (create, update, delete all users)
+- System configuration
+- All reports and analytics
+- Settings management
+
+HEAD_MASTER:
+- View all students, teachers, classrooms
+- Approve exam results
+- Approve syllabus submissions
+- View all reports and analytics
+- Settings management (email/SMS)
+- Cannot delete users (except own account)
+- Cannot modify system-level settings
+
+TEACHER:
+- View assigned classrooms and students
+- Create and manage exams
+- Enter exam results
+- Mark attendance (students)
+- Manage syllabus
+- Submit lesson notes
+- View own timetable
+- Send notifications to students/parents
+- Cannot approve exam results
+- Cannot access financial data
+
+STUDENT:
+- View own academic records
+- View own attendance
+- View own fees
+- View assignments and homework
+- View exam schedules
+- Cannot modify any data
+- Cannot view other students' data
+
+PARENT:
+- View children's academic records
+- View children's attendance
+- View children's fees
+- Send messages to teachers
+- Receive notifications
+- Cannot modify any data
+- Cannot view other students' data
+
+================================================================================
+4. JWT TOKEN IMPLEMENTATION
+================================================================================
+
+4.1 TOKEN PAYLOAD STRUCTURE:
+{
+  "sub": "user_id",
+  "email": "user@example.com",
+  "username": "username",
+  "role": "ADMIN",
+  "iat": 1234567890,
+  "exp": 1234571490,
+  "jti": "unique_token_id"
+}
+
+4.2 TOKEN VALIDATION:
+- Validate signature
+- Check expiration
+- Verify issuer and audience
+- Check if user is still active
+- Check if token is blacklisted (for logout)
+
+4.3 REFRESH TOKEN:
+- Store in database with user_id, token, expires_at
+- On refresh, validate token exists and not expired
+- Generate new access token
+- Optionally rotate refresh token
+
+================================================================================
+5. PASSWORD RESET FLOW
+================================================================================
+
+5.1 FORGOT PASSWORD:
+   1. User requests password reset with email
+   2. Generate secure random token (32+ characters)
+   3. Store token in database with:
+      - user_id
+      - token_hash
+      - expires_at (1 hour from now)
+      - used (boolean, default false)
+   4. Send email with reset link containing token
+   5. Return success message (don't reveal if email exists)
+
+5.2 RESET PASSWORD:
+   1. User submits token and new password
+   2. Validate token:
+      - Token exists
+      - Not expired
+      - Not already used
+   3. Hash new password
+   4. Update user password
+   5. Mark token as used
+   6. Invalidate all existing sessions (optional)
+   7. Return success
+
+================================================================================
+6. SESSION MANAGEMENT
+================================================================================
+
+6.1 SESSION TIMEOUT:
+   - Access token expires: 30 minutes
+   - Refresh token expires: 7 days
+   - Auto-refresh when token is about to expire (5 minutes before)
+
+6.2 LOGOUT:
+   - Add token to blacklist (if using)
+   - Delete refresh token from database
+   - Clear client-side storage
+
+6.3 SECURITY MEASURES:
+   - HTTPS only
+   - HttpOnly cookies for refresh tokens (optional)
+   - CORS configuration
+   - Rate limiting on login endpoint
+   - Account lockout after failed attempts (optional)
+   - IP whitelisting for admin (optional)
+
+================================================================================
+7. C# IMPLEMENTATION EXAMPLE
+================================================================================
+
+7.1 JWT CONFIGURATION (appsettings.json):
+{
+  "JwtSettings": {
+    "SecretKey": "your-secret-key-min-32-characters",
+    "Issuer": "StPetersSchool",
+    "Audience": "StPetersSchoolUsers",
+    "AccessTokenExpirationMinutes": 30,
+    "RefreshTokenExpirationDays": 7
+  }
+}
+
+7.2 AUTHENTICATION SERVICE INTERFACE:
+public interface IAuthService
+{
+    Task<AuthResponse> LoginAsync(LoginRequest request);
+    Task<AuthResponse> RefreshTokenAsync(string refreshToken);
+    Task LogoutAsync(string token);
+    Task ForgotPasswordAsync(string email);
+    Task ResetPasswordAsync(ResetPasswordRequest request);
+    Task<UserDto> GetCurrentUserAsync(string userId);
+}
+
+7.3 AUTHORIZATION ATTRIBUTES:
+[Authorize(Roles = "ADMIN,HEAD_MASTER")]
+[Authorize(Roles = "TEACHER")]
+[Authorize(Roles = "STUDENT,PARENT")]
+
+================================================================================
+8. PASSWORD HASHING
+================================================================================
+
+Use BCrypt.Net-Next:
+- Cost factor: 12
+- Example:
+  string hashedPassword = BCrypt.Net.BCrypt.HashPassword(password, 12);
+  bool isValid = BCrypt.Net.BCrypt.Verify(password, hashedPassword);
+
+================================================================================
+9. ERROR HANDLING
+================================================================================
+
+Authentication Errors:
+- 401 Unauthorized: Invalid or expired token
+- 403 Forbidden: Valid token but insufficient permissions
+- 400 Bad Request: Invalid request data
+- 429 Too Many Requests: Rate limit exceeded
+
+Error Response Format:
+{
+  "error": "Error code",
+  "message": "Human-readable message",
+  "details": {} // Optional additional details
+}
+
+================================================================================
